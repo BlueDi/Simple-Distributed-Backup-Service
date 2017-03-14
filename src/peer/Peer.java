@@ -10,9 +10,17 @@ public class Peer {
 	private static MulticastChannel mc = null;
 	private static MulticastChannel mdb = null;
 	private static MulticastChannel mdr = null;
+	private static MulticastListener mcListener = null;
+	private static MulticastListener mdbListener = null;
+	private static MulticastListener mdrListener = null;
 
+	/**
+	 * Função principal do programa.
+	 * @param args
+	 * @throws IOException
+	 */
 	public static void main(String[] args) throws IOException {
-		if (args.length != 3) {
+		if (args.length < 6) {
 			System.out.println("Usage: java <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
 			return;
 		}
@@ -30,6 +38,10 @@ public class Peer {
 		mdb.join();
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
 		mdr.join();
+		
+		mcListener = new MulticastListener(mc);
+		mdbListener = new MulticastListener(mdb);
+		mdrListener = new MulticastListener(mdr);
 
 		//executor for sending hello every 1sec
 		InetAddress hostAddr = InetAddress.getLocalHost();
