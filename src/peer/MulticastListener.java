@@ -5,8 +5,7 @@ import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class MulticastListener implements Runnable {
-	Thread t;
+public class MulticastListener extends Thread {
 	private MulticastChannel multicastChannel;
 	private Queue<String> receivedMsgs;
 
@@ -19,22 +18,19 @@ public class MulticastListener implements Runnable {
 
 		this.multicastChannel = multicastChannel;
 		this.receivedMsgs = receivedMsgs;
-
-		t = new Thread(this);
-		t.start();
 	}
 
 	/**
 	 * Inicia o thread para tratar o evento.
 	 */
 	public void run(){
-		while (!t.isInterrupted()) {
+		while (!isInterrupted()) {
 			try {
 				byte[] buf = new byte[65536];
-				byte[] data = multicastChannel.receive(buf);
+				String data = new String(multicastChannel.receive(buf));
 
 				if (data != null)
-					receivedMsgs.add(new String(data));
+					receivedMsgs.add(data);
 			}
 			catch (SocketException e) {
 				break;

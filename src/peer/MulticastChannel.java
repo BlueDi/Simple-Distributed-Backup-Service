@@ -31,9 +31,9 @@ public class MulticastChannel {
 	 */
 	public void join() throws IOException {
 		socket = new MulticastSocket(PORT);
-		socket.setTimeToLive(1);
+		//socket.setTimeToLive(1);
 		socket.joinGroup(group);
-		socket.setLoopbackMode(true);
+		//socket.setLoopbackMode(true);
 	}
 
 	/**
@@ -56,7 +56,6 @@ public class MulticastChannel {
 		DatagramPacket packet = new DatagramPacket(buf, buf.length, group, PORT);
 		socket.receive(packet);
 		byte[] data = Arrays.copyOfRange(packet.getData(), 0, packet.getLength());
-		System.out.println(data);
 		return data;
 	}
 

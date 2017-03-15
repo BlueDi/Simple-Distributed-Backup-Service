@@ -6,6 +6,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import handlers.MdbHandler;
+
 public class Peer {
 	private static MulticastChannel mc = null;
 	private static MulticastChannel mdb = null;
@@ -13,6 +15,7 @@ public class Peer {
 	private static MulticastListener mcListener = null;
 	private static MulticastListener mdbListener = null;
 	private static MulticastListener mdrListener = null;
+	private static MdbHandler mdbHandler = null;
 
 	/**
 	 * Função principal do programa.
@@ -38,23 +41,34 @@ public class Peer {
 		mdb.join();
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
 		mdr.join();
-		
+
 		mcListener = new MulticastListener(mc);
 		mdbListener = new MulticastListener(mdb);
 		mdrListener = new MulticastListener(mdr);
 
+		mcListener.start();
+		mdbListener.start();
+		mdrListener.start();
+
+		//mcHandler = new McHandler(mdrListener.getQueue());
+		mdbHandler = new MdbHandler(mdbListener.getQueue());
+		//mdrHandler = new MdrHandler(mdrListener.getQueue());
+
+		mdbHandler.start();
+
 		//executor for sending hello every 1sec
-		InetAddress hostAddr = InetAddress.getLocalHost();
-		String outMessage = hostAddr.getHostAddress().toString() + " " + MC_PORT;
+		InetAddress hostAddr = InetAddress.getByName(MDB_IP);
+		String outMessage = hostAddr.getHostAddress().toString() + " " + MDB_PORT;
 		System.out.println(outMessage);
 		byte[] autoBuffer = outMessage.getBytes();
-		
+
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
 		Runnable task = () -> {
 			try {
-				mc.send(autoBuffer);
-				System.out.println("Sending multicast");
+				mdb.send(autoBuffer);
+				String message_sent = new String(autoBuffer);
+				System.out.println("Sending multicast: " + message_sent);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Failed to multicast");
@@ -66,10 +80,5 @@ public class Peer {
 		int period = 1;
 		executor.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
 
-		//escutar se algum cliente está a mandar dados
-		System.out.println("Server started");
-		while (true) {
-			System.out.println(mc.receive(autoBuffer));
-		}
 	}
 }
