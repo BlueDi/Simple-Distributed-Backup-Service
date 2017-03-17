@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.*;
 
 import handlers.MdbHandler;
-public class PeerInitiator {
+public class Client {
 	private static MulticastChannel mc = null;
 	private static MulticastChannel mdb = null;
 	private static MulticastChannel mdr = null;
