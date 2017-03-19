@@ -11,7 +11,7 @@ import java.util.Queue;
 
 import interfaces.Chunk;
 
-public class MdbHandler extends Thread {
+public class MdbHandler implements Runnable {
 	private Queue<String> msgQueue;
 	private Queue<Chunk> chunksReceived = new LinkedList<Chunk>();
 
@@ -21,7 +21,7 @@ public class MdbHandler extends Thread {
 
 	@Override
 	public void run() {
-		while (!isInterrupted())
+		while (!Thread.currentThread().isInterrupted())
 			analyseMessages();
 	}
 

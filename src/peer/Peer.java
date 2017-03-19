@@ -12,17 +12,68 @@ public class Peer {
 	private static MulticastChannel mc = null;
 	private static MulticastChannel mdb = null;
 	private static MulticastChannel mdr = null;
+
 	private static MulticastListener mcListener = null;
 	private static MulticastListener mdbListener = null;
 	private static MulticastListener mdrListener = null;
+
+	//private static McHandler mcHandler = null;
 	private static MdbHandler mdbHandler = null;
+	//private static MdrHandler mdrHandler = null;
+
+	private static Thread mcListener_Thread = null;
+	private static Thread mdbListener_Thread = null;
+	private static Thread mdrListener_Thread = null;
+	private static Thread mcHandler_Thread = null;
+	private static Thread mdbHandler_Thread = null;
+	private static Thread mdrHandler_Thread = null;
+
+	private static void joinChannels() throws IOException{
+		mc.join();
+		mdb.join();
+		mdr.join();
+	}
+
+	/**
+	 * Inicia os Threads dos Listeners.
+	 */
+	private static void initializeListeners(){		
+		mcListener = new MulticastListener(mc);
+		mdbListener = new MulticastListener(mdb);
+		mdrListener = new MulticastListener(mdr);
+
+		mcListener_Thread = new Thread(mcListener);
+		mdbListener_Thread = new Thread(mdbListener);
+		mdrListener_Thread = new Thread(mdrListener);
+
+		mcListener_Thread.start();
+		mdbListener_Thread.start();
+		mdrListener_Thread.start();
+	}
+
+	/**
+	 * Inicia os Threads dos Handlers.
+	 */
+	private static void initializeHandlers(){		
+		//mcHandler = new McHandler(mcListener.getQueue());
+		mdbHandler = new MdbHandler(mdbListener.getQueue());
+		//mdrHandler = new MdrHandler(mdrListener.getQueue());
+
+		//mcHandler_Thread = new Thread(mcHandler);
+		mdbHandler_Thread = new Thread(mdbHandler);
+		//mdrHandler_Thread = new Thread(mdrHandler);
+
+		//mcHandler_Thread.start();
+		mdbHandler_Thread.start();
+		//mdrHandler_Thread.start();
+	}
 
 	/**
 	 * Função principal do programa.
-	 * @param args
-	 * @throws IOException
+	 * @param args Argumentos passados na chamada do programa
+	 * @throws IOException Caso não consiga criar o canal multicast ou não se consiga ligar ao canal multicast.
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException{
 		if (args.length < 6) {
 			System.out.println("Usage: java <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
 			return;
@@ -36,25 +87,12 @@ public class Peer {
 		int MDR_PORT = Integer.parseInt(args[5]);
 
 		mc = new MulticastChannel(MC_IP, MC_PORT);
-		mc.join();
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
-		mdb.join();
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
-		mdr.join();
 
-		mcListener = new MulticastListener(mc);
-		mdbListener = new MulticastListener(mdb);
-		mdrListener = new MulticastListener(mdr);
-
-		mcListener.start();
-		mdbListener.start();
-		mdrListener.start();
-
-		//mcHandler = new McHandler(mdrListener.getQueue());
-		mdbHandler = new MdbHandler(mdbListener.getQueue());
-		//mdrHandler = new MdrHandler(mdrListener.getQueue());
-
-		mdbHandler.start();
+		joinChannels();
+		initializeListeners();
+		initializeHandlers();
 
 		//executor for sending hello every 1sec
 		InetAddress hostAddr = InetAddress.getByName(MDB_IP);
@@ -71,7 +109,6 @@ public class Peer {
 				String message_sent = new String(autoBuffer);
 				System.out.println("Sending multicast: " + message_sent);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				System.out.println("Failed to multicast");
 				e.printStackTrace();
 			}
