@@ -3,7 +3,6 @@ package peer;
 import java.io.IOException;
 import java.util.Scanner;
 
-import handlers.MdbHandler;
 public class Client {
 //	private static MulticastChannel mc = null;
 //	private static MulticastChannel mdb = null;

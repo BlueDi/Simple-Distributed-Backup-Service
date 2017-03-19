@@ -95,7 +95,6 @@ public class Peer {
 		initializeHandlers();
 
 		//executor for sending hello every 1sec
-		InetAddress hostAddr = InetAddress.getByName(MDB_IP);
 		String outMessage = "PUTCHUNK " + "1.0" + " " + "128.128.128.128" + " " + "chunkteste" + " " + "5" + " " + "3" + " " + "0xD0xA" + " " + "0xD0xA" + " " + "Dados que o chunk vai ter";
 		//estrutura da mensagem do backup: PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF> <Body>
 		System.out.println(outMessage);

@@ -75,14 +75,10 @@ public class MdbHandler implements Runnable {
 		String version = msg[1];
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		if(!"1.0".equals(version) && 
+		return !"1.0".equals(version) && 
 				(replicationDeg > 8 || replicationDeg < 0) &&
 				msg[6].equals("0xD0xA") &&
-				msg[7].equals("0xD0xA")
-				)
-			return false;
-
-		return true;
+				msg[7].equals("0xD0xA");
 	}
 
 	/**
