@@ -13,7 +13,7 @@ public class Client {
 //	private static MdbHandler mdbHandler = null;
 	
 	//Peer Initiator
-	private static int acess_point;
+//	private static int acess_point;
 	
 	/**
 	 * Peer initiator function
@@ -21,7 +21,7 @@ public class Client {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException{
-		Scanner input = new Scanner(System.in);
+//		Scanner input = new Scanner(System.in);
 		if (args.length < 4) 
 		{
 			System.out.println("Usage: java PeerInitiator <peer_ap> <sub_protocol> <opnd_1> <opnd_2> ");
@@ -35,13 +35,13 @@ public class Client {
 
 	public static void processInput(String[] args){
 		try {
-			acess_point = Integer.parseInt(args[0]);
+//			acess_point = Integer.parseInt(args[0]);
 		} catch (NumberFormatException e) {  
 			System.out.println("Error parsing acess point");
 		}
 		String subProtocol = args[1];
-		String operand1 = args[2];
-		String operand2 = args[3];
+//		String operand1 = args[2];
+//		String operand2 = args[3];
 
 		switch(subProtocol){
 		case "BACKUP" : 
