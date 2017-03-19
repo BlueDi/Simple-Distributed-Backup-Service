@@ -2,11 +2,13 @@ package peer;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import handlers.MdbHandler;
+import interfaces.Backup;
 
 public class Peer {
 	private static MulticastChannel mc = null;
@@ -72,8 +74,9 @@ public class Peer {
 	 * Função principal do programa.
 	 * @param args Argumentos passados na chamada do programa
 	 * @throws IOException Caso não consiga criar o canal multicast ou não se consiga ligar ao canal multicast.
+	 * @throws NoSuchAlgorithmException 
 	 */
-	public static void main(String[] args) throws IOException{
+	public static void main(String[] args) throws IOException, NoSuchAlgorithmException{
 		if (args.length < 6) {
 			System.out.println("Usage: java <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
 			return;
@@ -93,6 +96,8 @@ public class Peer {
 		joinChannels();
 		initializeListeners();
 		initializeHandlers();
+		
+		Backup bckp = new Backup();
 
 		//executor for sending hello every 1sec
 		String outMessage = "PUTCHUNK " + "1.0" + " " + "128.128.128.128" + " " + "chunkteste" + " " + "5" + " " + "3" + " " + "0xD0xA" + " " + "0xD0xA" + " " + "Dados que o chunk vai ter";
@@ -116,6 +121,7 @@ public class Peer {
 		int initialDelay = 0;
 		int period = 1;
 		executor.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+		
 
 	}
 }
