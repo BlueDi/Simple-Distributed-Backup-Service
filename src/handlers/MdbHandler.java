@@ -62,9 +62,7 @@ public class MdbHandler implements Runnable {
 	 */
 	private boolean checkValidMessageType(String messageType){
 		//check valid backup message
-		if (!messageType.equals("PUTCHUNK")) 
-			return false;
-		return true;
+		return !"PUTCHUNK".equals(messageType);
 	}
 
 	/**
@@ -77,7 +75,7 @@ public class MdbHandler implements Runnable {
 		String version = msg[1];
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		if(version != "1.0" && 
+		if(!"1.0".equals(version) && 
 				(replicationDeg > 8 || replicationDeg < 0) &&
 				msg[6].equals("0xD0xA") &&
 				msg[7].equals("0xD0xA")

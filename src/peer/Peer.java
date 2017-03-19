@@ -24,9 +24,9 @@ public class Peer {
 	private static Thread mcListener_Thread = null;
 	private static Thread mdbListener_Thread = null;
 	private static Thread mdrListener_Thread = null;
-	private static Thread mcHandler_Thread = null;
+	//private static Thread mcHandler_Thread = null;
 	private static Thread mdbHandler_Thread = null;
-	private static Thread mdrHandler_Thread = null;
+	//private static Thread mdrHandler_Thread = null;
 
 	private static void joinChannels() throws IOException{
 		mc.join();
