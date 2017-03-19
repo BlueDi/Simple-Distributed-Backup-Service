@@ -2,65 +2,81 @@ package interfaces;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 public class Backup {
 	private String filename; // used for hashing only
 	private String filepath; // used to get the file
-	private int replicationLevel; 
-	private String owner; // used for hashing only
+	private int replicationLevel;
 	private ArrayList<Chunk> chunkFiles = new ArrayList<Chunk>();
 	private int READ_LENGTH = 6400;
 
+	/**
+	 * Retorna um array com os chunks que s�o necess�rios enviar.
+	 * @return Array de chunks por enviar
+	 */
 	public ArrayList<Chunk> getChunkFiles() {
 		return chunkFiles;
 	}
 
-	public Backup() throws NoSuchAlgorithmException, IOException{
-		this.filepath = "lorem_ipsum.txt";
-		this.replicationLevel = 2;
-		this.owner = "me";
+	/**
+	 * Construtor do Backup.
+	 * @param filepath Path para o ficheiro que se quer enviar
+	 * @param replicationLevel N�vel de replica��o. Quantos peers devem armazenar chunks deste ficheiro
+	 * @throws FileNotFoundException Quando n�o econtra o ficheiro pretendido
+	 */
+	public Backup(String filepath, int replicationLevel) throws FileNotFoundException{
+		this.filepath = filepath;
+		this.replicationLevel = replicationLevel;
 
 		splitFile();
-		
+
 		sendingData();
 	}
-	
-	public void splitFile(){
+
+	/**
+	 * Divide o ficheiro que se quer fazer backup em chunks e armazena-os em chunkFiles.
+	 * Enquanto o tamanho do ficheiro for maior que 0 tenta ler e criar um chunk.
+	 * @throws FileNotFoundException 
+	 */
+	public void splitFile() throws FileNotFoundException{
 		File bckFile = new File(this.filepath);
 		System.out.println(bckFile.getAbsolutePath());
 		FileInputStream readStream;
 		int fileS = (int) bckFile.length();
 		int chunkNo = 1;
 		byte[] byteChunkPart;
-		
-		try {
-			readStream = new FileInputStream(bckFile);
-			while(fileS > 0){
-				if(fileS < READ_LENGTH)
-					READ_LENGTH = fileS;
-				byteChunkPart = new byte[READ_LENGTH];
-				int read = readStream.read(byteChunkPart, 0, READ_LENGTH);
-				fileS -= read;
-				chunkNo += 1;
 
+		readStream = new FileInputStream(bckFile);
+		while(fileS > 0){
+			int toRead = READ_LENGTH;
+			if(fileS < READ_LENGTH)
+				toRead = fileS;
+			byteChunkPart = new byte[toRead];
+
+			try {
+				fileS -= readStream.read(byteChunkPart, 0, toRead);
+				chunkNo++;
 				Chunk chunk = new Chunk(filename, replicationLevel, chunkNo, byteChunkPart);
 				this.chunkFiles.add(chunk);
+			} catch (IOException e) {
+				System.out.println("Failed to read from file.");
+				e.printStackTrace();
 			}
-			readStream.close();
-
-		}catch (IOException exception) {
-			exception.printStackTrace();
 		}
+
+		try {
+			readStream.close();
+		} catch (IOException e) {
+			System.out.println("Failed to close the file.");
+			e.printStackTrace();
+		}
+
 	}
 
-	private void sendingData() throws IOException{		
-		String msgStream = "uau";
-
-		byte[] messageCompleted = msgStream.getBytes();
+	private void sendingData(){
 		System.out.println("numero de chunks: " + chunkFiles.size());
-		//Peer.mdb.send(messageCompleted);
 	}
 }

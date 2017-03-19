@@ -1,8 +1,6 @@
 package peer;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -74,9 +72,8 @@ public class Peer {
 	 * Função principal do programa.
 	 * @param args Argumentos passados na chamada do programa
 	 * @throws IOException Caso não consiga criar o canal multicast ou não se consiga ligar ao canal multicast.
-	 * @throws NoSuchAlgorithmException 
 	 */
-	public static void main(String[] args) throws IOException, NoSuchAlgorithmException{
+	public static void main(String[] args) throws IOException{
 		if (args.length < 6) {
 			System.out.println("Usage: java <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
 			return;
@@ -97,7 +94,7 @@ public class Peer {
 		initializeListeners();
 		initializeHandlers();
 		
-		Backup bckp = new Backup();
+		Backup bckp = new Backup("lorem_ipsum.txt", 2);
 
 		//executor for sending hello every 1sec
 		String outMessage = "PUTCHUNK " + "1.0" + " " + "128.128.128.128" + " " + "chunkteste" + " " + "5" + " " + "3" + " " + "0xD0xA" + " " + "0xD0xA" + " " + "Dados que o chunk vai ter";
