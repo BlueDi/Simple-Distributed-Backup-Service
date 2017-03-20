@@ -1,33 +1,39 @@
 package peer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import handlers.MdbHandler;
 import interfaces.Backup;
+import interfaces.Chunk;
 
 public class Peer {
-	private static MulticastChannel mc = null;
-	private static MulticastChannel mdb = null;
-	private static MulticastChannel mdr = null;
+	private static MulticastChannel mc;
+	private static MulticastChannel mdb;
+	private static MulticastChannel mdr;
 
-	private static MulticastListener mcListener = null;
-	private static MulticastListener mdbListener = null;
-	private static MulticastListener mdrListener = null;
+	private static MulticastListener mcListener;
+	private static MulticastListener mdbListener;
+	private static MulticastListener mdrListener;
 
-	//private static McHandler mcHandler = null;
-	private static MdbHandler mdbHandler = null;
-	//private static MdrHandler mdrHandler = null;
+	//private static McHandler mcHandler;
+	private static MdbHandler mdbHandler;
+	//private static MdrHandler mdrHandler;
 
-	private static Thread mcListener_Thread = null;
-	private static Thread mdbListener_Thread = null;
-	private static Thread mdrListener_Thread = null;
-	//private static Thread mcHandler_Thread = null;
-	private static Thread mdbHandler_Thread = null;
-	//private static Thread mdrHandler_Thread = null;
+	private static Thread mcListener_Thread;
+	private static Thread mdbListener_Thread;
+	private static Thread mdrListener_Thread;
+	//private static Thread mcHandler_Thread;
+	private static Thread mdbHandler_Thread;
+	//private static Thread mdrHandler_Thread;
 
+	/**
+	 * Liga o programa aos canais multicast.
+	 * @throws IOException Falha na ligação aos canais multicast
+	 */
 	private static void joinChannels() throws IOException{
 		mc.join();
 		mdb.join();
@@ -42,6 +48,7 @@ public class Peer {
 		mdbListener = new MulticastListener(mdb);
 		mdrListener = new MulticastListener(mdr);
 
+		(new Thread(mdbListener)).start();
 		mcListener_Thread = new Thread(mcListener);
 		mdbListener_Thread = new Thread(mdbListener);
 		mdrListener_Thread = new Thread(mdrListener);
@@ -93,24 +100,31 @@ public class Peer {
 		joinChannels();
 		initializeListeners();
 		initializeHandlers();
-		
-		Backup bckp = new Backup("lorem_ipsum.txt", 2);
 
-		//executor for sending hello every 1sec
-		String outMessage = "PUTCHUNK " + "1.0" + " " + "128.128.128.128" + " " + "chunkteste" + " " + "5" + " " + "3" + " " + "0xD0xA" + " " + "0xD0xA" + " " + "Dados que o chunk vai ter";
-		//estrutura da mensagem do backup: PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF> <Body>
-		System.out.println(outMessage);
-		byte[] autoBuffer = outMessage.getBytes();
+		Backup bckp = new Backup("lorem_ipsum.txt", 2);
+		ArrayList<Chunk> chunkFiles = bckp.getChunkFiles();
 
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
 		Runnable task = () -> {
 			try {
-				mdb.send(autoBuffer);
-				String message_sent = new String(autoBuffer);
-				System.out.println("Sending multicast: " + message_sent);
-			} catch (IOException e) {
+				if(!chunkFiles.isEmpty()){
+					System.out.println("\nSending multicast: ");
+					byte[] autoBuffer = null;
+					Chunk c = chunkFiles.remove(0);
+					String outMessage = "PUTCHUNK" + " " + "1.0" + " " + "128.128.128.128" + " " + c.getFileId() + " " + c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
+					//estrutura da mensagem do backup: PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF> <Body>
+					System.out.println(outMessage);
+					autoBuffer = outMessage.getBytes();
+					mdb.send(autoBuffer);
+				}
+				Thread.sleep(200);
+			} 
+			catch (IOException e) {
 				System.out.println("Failed to multicast");
+				e.printStackTrace();
+			}
+			catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		};
@@ -118,7 +132,5 @@ public class Peer {
 		int initialDelay = 0;
 		int period = 1;
 		executor.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
-		
-
 	}
 }

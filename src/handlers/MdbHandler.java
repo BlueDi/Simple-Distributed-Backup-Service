@@ -21,8 +21,9 @@ public class MdbHandler implements Runnable {
 
 	@Override
 	public void run() {
-		while (!Thread.currentThread().isInterrupted())
+		while (!Thread.currentThread().isInterrupted()){
 			analyseMessages();
+		}
 	}
 
 	/**
@@ -37,8 +38,8 @@ public class MdbHandler implements Runnable {
 				print(msg);
 
 				analyseHeader(msg);
+				
 				byte[] body = analyseBody(msg[8]);
-
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
 
 				try {
@@ -62,7 +63,7 @@ public class MdbHandler implements Runnable {
 	 */
 	private boolean checkValidMessageType(String messageType){
 		//check valid backup message
-		return !"PUTCHUNK".equals(messageType);
+		return "PUTCHUNK".equals(messageType);
 	}
 
 	/**
@@ -101,7 +102,9 @@ public class MdbHandler implements Runnable {
 	 */
 	private void storeChunk(Chunk chunk) throws IOException{
 		byte data[] = chunk.getContent();
-		Path path = Paths.get(("../chunks/" + chunk.getFileId()));
+		String numb = String.format("%03d", chunk.getChunkNumber());
+		Path path = Paths.get(("./chunks/" + chunk.getFileId() + numb ));
+		
 		Files.createDirectories(path.getParent());        
 		try {
 			Files.createFile(path);

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class Backup {
-	private String filename; // used for hashing only
 	private String filepath; // used to get the file
 	private int replicationLevel;
 	private ArrayList<Chunk> chunkFiles = new ArrayList<Chunk>();
@@ -24,8 +23,8 @@ public class Backup {
 	/**
 	 * Construtor do Backup.
 	 * @param filepath Path para o ficheiro que se quer enviar
-	 * @param replicationLevel Nï¿½vel de replicaï¿½ï¿½o. Quantos peers devem armazenar chunks deste ficheiro
-	 * @throws FileNotFoundException Quando nï¿½o econtra o ficheiro pretendido
+	 * @param replicationLevel Nível de replicação. Quantos peers devem armazenar chunks deste ficheiro
+	 * @throws FileNotFoundException Quando não econtra o ficheiro pretendido
 	 */
 	public Backup(String filepath, int replicationLevel) throws FileNotFoundException{
 		this.filepath = filepath;
@@ -46,7 +45,7 @@ public class Backup {
 		System.out.println(bckFile.getAbsolutePath());
 		FileInputStream readStream;
 		int fileS = (int) bckFile.length();
-		int chunkNo = 1;
+		int chunkNo = 0;
 		byte[] byteChunkPart;
 
 		readStream = new FileInputStream(bckFile);
@@ -59,7 +58,7 @@ public class Backup {
 			try {
 				fileS -= readStream.read(byteChunkPart, 0, toRead);
 				chunkNo++;
-				Chunk chunk = new Chunk(filename, replicationLevel, chunkNo, byteChunkPart);
+				Chunk chunk = new Chunk(filepath, chunkNo, replicationLevel, byteChunkPart);
 				this.chunkFiles.add(chunk);
 			} catch (IOException e) {
 				System.out.println("Failed to read from file.");
