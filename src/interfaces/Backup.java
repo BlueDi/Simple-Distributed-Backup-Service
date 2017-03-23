@@ -13,7 +13,7 @@ public class Backup {
 	private int READ_LENGTH = 6400;
 
 	/**
-	 * Retorna um array com os chunks que sï¿½o necessï¿½rios enviar.
+	 * Retorna um array com os chunks que são necessários enviar.
 	 * @return Array de chunks por enviar
 	 */
 	public ArrayList<Chunk> getChunkFiles() {
@@ -33,6 +33,16 @@ public class Backup {
 		splitFile();
 
 		sendingData();
+	}
+
+	/**
+	 * Construtor alternativo do Backup.
+	 * @param filepath Path para o ficheiro que se quer enviar
+	 * @param replicationLevel Nível de replicação. Quantos peers devem armazenar chunks deste ficheiro. String que representa um int
+	 * @throws FileNotFoundException
+	 */
+	public Backup(String filepath, String replicationLevel) throws FileNotFoundException {
+		this(filepath, Integer.parseInt(replicationLevel));
 	}
 
 	/**

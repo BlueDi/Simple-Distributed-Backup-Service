@@ -38,25 +38,30 @@ public class MulticastChannel {
 
 	/**
 	 * Envia um DatagramPacket com a informação de toSend para a rede multicast.
-	 * @param toSend
+	 * @param toSend Dados a ser enviados sob a forma de byte[]
 	 * @throws IOException
 	 */
-	public void send(byte[] toSend) throws IOException {
+	public void send(byte[] toSend) {
 		DatagramPacket packet = new DatagramPacket(toSend, toSend.length, group, PORT);
-		socket.send(packet);
+		try {
+			socket.send(packet);
+		} catch (IOException e) {
+			System.out.println("Falhou no envio do packet.");
+			e.printStackTrace();
+		}
 	}
 
 	/**
 	 * Recebe da rede multicast.
-	 * @param buf
-	 * @return
+	 * @param buf buffer a ser preenchido
+	 * @return byte[] com data recebida
 	 * @throws IOException
 	 */
-	public byte[] receive(byte[] buf) throws IOException {
+	public byte[] receive() throws IOException {
+		byte[] buf = new byte[65536];
 		DatagramPacket packet = new DatagramPacket(buf, buf.length, group, PORT);
 		socket.receive(packet);
-		byte[] data = Arrays.copyOfRange(packet.getData(), 0, packet.getLength());
-		return data;
+		return Arrays.copyOfRange(packet.getData(), 0, packet.getLength());
 	}
 
 	/**

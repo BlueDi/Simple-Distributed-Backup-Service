@@ -11,7 +11,7 @@ public class MulticastListener implements Runnable {
 
 	/**
 	 * Construtor do listener para o canal multicast.
-	 * @param multicastChannel
+	 * @param multicastChannel Multicast Channel ao qual se quer atribuir um Listener
 	 */
 	public MulticastListener(MulticastChannel multicastChannel) {
 		Queue<String> receivedMsgs = new LinkedList<String>();
@@ -26,17 +26,13 @@ public class MulticastListener implements Runnable {
 	public void run(){
 		while (!Thread.currentThread().isInterrupted()) {
 			try {
-				byte[] buf = new byte[65536];
-				String data = new String(multicastChannel.receive(buf));
+				String data = new String(multicastChannel.receive());
 
-				if (data != null)
+				if (data.length() != 0)
 					receivedMsgs.add(data);
 			}
-			catch (SocketException e) {
-				break;
-			}
 			catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("There was an error when tried to receive from the multicast channel.");
 				break;
 			}
 		}

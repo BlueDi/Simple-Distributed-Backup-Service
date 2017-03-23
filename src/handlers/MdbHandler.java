@@ -27,6 +27,13 @@ public class MdbHandler implements Runnable {
 	}
 
 	/**
+	 * @return the chunksReceived
+	 */
+	public Queue<Chunk> getChunksReceived() {
+		return chunksReceived;
+	}
+
+	/**
 	 * Analisa todas as mensagens armazenadas.
 	 */
 	private void analyseMessages(){
@@ -38,7 +45,7 @@ public class MdbHandler implements Runnable {
 				print(msg);
 
 				analyseHeader(msg);
-				
+
 				byte[] body = analyseBody(msg[8]);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
 
@@ -62,7 +69,6 @@ public class MdbHandler implements Runnable {
 	 * @return True se tem o MessageType correto
 	 */
 	private boolean checkValidMessageType(String messageType){
-		//check valid backup message
 		return "PUTCHUNK".equals(messageType);
 	}
 
@@ -72,14 +78,14 @@ public class MdbHandler implements Runnable {
 	 * @param msg Mensagem recebida
 	 * @return true se o cabeçalho é válido
 	 */
-	private boolean analyseHeader(String[] msg){	
+	private boolean analyseHeader(String[] msg){
 		String version = msg[1];
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		return !"1.0".equals(version) && 
-				(replicationDeg > 8 || replicationDeg < 0) &&
-				msg[6].equals("0xD0xA") &&
-				msg[7].equals("0xD0xA");
+		return "1.0".equals(version) && 
+				(replicationDeg <= 9 || replicationDeg >= 0) &&
+				"0xD0xA".equals(msg[6]) &&
+				"0xD0xA".equals(msg[7]);
 	}
 
 	/**
@@ -104,7 +110,7 @@ public class MdbHandler implements Runnable {
 		byte data[] = chunk.getContent();
 		String numb = String.format("%03d", chunk.getChunkNumber());
 		Path path = Paths.get(("./chunks/" + chunk.getFileId() + numb ));
-		
+
 		Files.createDirectories(path.getParent());        
 		try {
 			Files.createFile(path);
@@ -113,13 +119,13 @@ public class MdbHandler implements Runnable {
 			System.err.println("Chunk already exists: " + e.getMessage());
 		}
 	}
-
+	
 	/**
 	 * Imprime a mensagem no ecrã.
 	 * @param msg Array de strings a ser imprimido
 	 */
-	private void print(String[] msg){
-		System.out.println("Received: ");
+	protected void print(String[] msg) {
+		System.out.println("\nReceived on MDB: ");
 		for(int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
 		System.out.println();

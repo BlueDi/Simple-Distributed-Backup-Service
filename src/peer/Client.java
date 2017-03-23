@@ -1,61 +1,49 @@
 package peer;
 
 import java.io.IOException;
-import java.util.Scanner;
 
 public class Client {
-//	private static MulticastChannel mc = null;
-//	private static MulticastChannel mdb = null;
-//	private static MulticastChannel mdr = null;
-//	private static MulticastListener mcListener = null;
-//	private static MulticastListener mdbListener = null;
-//	private static MulticastListener mdrListener = null;
-//	private static MdbHandler mdbHandler = null;
-	
-	//Peer Initiator
-//	private static int acess_point;
-	
+	private static String peer_ap;
+	private static String operation;
+	private static String operand_1;
+	private static String operand_2;
+
 	/**
 	 * Peer initiator function
 	 * @param args
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException{
-//		Scanner input = new Scanner(System.in);
-		if (args.length < 4) 
-		{
-			System.out.println("Usage: java PeerInitiator <peer_ap> <sub_protocol> <opnd_1> <opnd_2> ");
+		if (args.length < 4) {
+			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2> ");
+			return;
 		}
-		else
-		{
-			processInput(args);
-		}
-
+		if(processInput(args))
+			execute();
 	}
 
-	public static void processInput(String[] args){
-		try {
-//			acess_point = Integer.parseInt(args[0]);
-		} catch (NumberFormatException e) {  
-			System.out.println("Error parsing acess point");
-		}
-		String subProtocol = args[1];
-//		String operand1 = args[2];
-//		String operand2 = args[3];
+	/**
+	 * Verifica se os argumentos passados são válidos.
+	 * TODO: resto das verificações dos argumentos. Ainda só está feito para a operation.
+	 * @param args Argumentos passados na consola
+	 */
+	private static boolean processInput(String[] args){
+		peer_ap = args[0];
+		operation = args[1];
+		operand_1 = args[2];
+		operand_2 = args[3];
 
-		switch(subProtocol){
-		case "BACKUP" : 
-			operationBackup();
-			break;
-		case "RESTORE" : break;
-		case "DELETE" : break;
-		case "RECLAIM" : break;
-		case "STATE" : break;
-		default: System.out.println("Wrong State"); break;
-		}
+		if(!"BACKUP".equals(operation)
+				&& !"RESTORE".equals(operation) 
+				&& !"DELETE".equals(operation) 
+				&& !"RECLAIM".equals(operation) 
+				&& !"STATE".equals(operation))
+			return false;
+		
+		return true;
 	}
 
-	public static void operationBackup(){
-		System.out.println("Backup this file");
+	private static void execute(){
+		Peer.execute(peer_ap, operation, operand_1, operand_2);
 	}
 }

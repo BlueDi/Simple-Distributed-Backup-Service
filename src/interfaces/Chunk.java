@@ -5,14 +5,30 @@ public class Chunk implements Comparable<Chunk> {
 	private int replicationDegree;
 	private int chunkNumber;
 	private byte[] content;
+	private boolean checked;
 	
 	public Chunk(String fileId, int chunkNumber, int replicationDegree, byte[] content) {
 		this.fileId = fileId;
 		this.replicationDegree = replicationDegree;
 		this.chunkNumber = chunkNumber;
 		this.content = content;
+		this.checked = false;
 	}
 	
+	/**
+	 * @return the check
+	 */
+	public boolean isChecked() {
+		return checked;
+	}
+
+	/**
+	 * @param check the check to set
+	 */
+	public void setChecked(boolean checked) {
+		this.checked = checked;
+	}
+
 	public String getFileId() {
 		return fileId;
 	}
