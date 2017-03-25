@@ -108,14 +108,9 @@ public class Peer implements PeerInterface {
 		mc.send(confirmation);
 	}
 
-	public static void execute(String peer_ap, String operation, String filePath, String replicationDegree){
+	public void execute(String peer_ap, String operation, String filePath, String replicationDegree){
 		String[] test = new String[] {"1.0", peer_ap, "test"};
-		try {
-			main(test);
-		} catch (IOException e) {
-			System.out.println("Failed to call main by execute in peer.");
-		}
-
+		
 		PEER_ID = Integer.parseInt(peer_ap);
 		Backup bckp;
 		try {

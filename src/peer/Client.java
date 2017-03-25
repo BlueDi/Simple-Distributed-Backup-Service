@@ -21,7 +21,7 @@ public class Client {
 		}
 		
 		if(processInput(args))
-			execute();
+			callBackup();
 		
 	}
 
@@ -50,6 +50,17 @@ public class Client {
             PeerInterface stub = (PeerInterface) registry.lookup("PeerInterface");
             String response = stub.sayHello();
             System.out.println("response: " + response);
+        } catch (Exception e) {
+            System.err.println("Client exception: " + e.toString());
+            e.printStackTrace();
+        }
+	}
+	private static void callBackup()
+	{
+		try {
+            Registry registry = LocateRegistry.getRegistry("localhost");
+            PeerInterface stub = (PeerInterface) registry.lookup("PeerInterface");
+            stub.execute(peer_ap, operation, operand_1, operand_2);
         } catch (Exception e) {
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
