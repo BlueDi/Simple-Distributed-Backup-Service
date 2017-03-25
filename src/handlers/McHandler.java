@@ -1,11 +1,17 @@
 package handlers;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.TreeSet;
 
 public class McHandler implements Runnable {
 	private Queue<String> msgQueue;
 	private TreeSet<ChunkInfo> treeofchunks = new TreeSet<ChunkInfo>();
+	private String messageType = "";
 
 	public McHandler(Queue<String> msgQueue) {
 		this.msgQueue = msgQueue;
@@ -18,42 +24,55 @@ public class McHandler implements Runnable {
 		}
 	}
 
-	class ChunkInfo implements Comparable<ChunkInfo>{
-		public String fileId;
-		public String senderId;
-		public int chunkNo;
-
-		ChunkInfo(String senderId, String fileId, int chunkNo){
-			this.senderId = senderId;
-			this.fileId = fileId;
-			this.chunkNo = chunkNo;
-		}
-
-		@Override
-		public int compareTo(ChunkInfo ci) {
-			return fileId.equals(ci.fileId) || senderId.equals(ci.senderId) || (chunkNo == ci.chunkNo) ? 0 : -1;
-		}
-	}
-
 	/**
-	 * Analisa todas as mensagens armazenadas.
+	 * Analisa todas as mensagens armazenadas vindas do MC.
 	 */
 	private void analyseMessages(){
 		if (!msgQueue.isEmpty()) {
 			String[] msg = msgQueue.poll().split("\\s",7);
 			print(msg);
-			
-			if(checkValidMessageType(msg[0])){
+
+			if(checkMessageType(msg[0]) && "STORED".equals(this.messageType)){
 				ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3], Integer.parseInt(msg[4]));
-				
+
 				analyseHeader(msg);
 				checkStoredChunk(chunkinfo);
+			}
+			else if(checkMessageType(msg[0]) && "DELETE".equals(this.messageType)){
+				ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3]);
+				
+				deleteFiles(chunkinfo);
 			}
 		}
 	}
 
-	private boolean checkValidMessageType(String messageType) {
-		return "STORED".equals(messageType);
+	/**
+	 * Apaga todos os ficheiros começados por fileID
+	 * @param fileID prefixo do nome do ficheiro a apagar
+	 */
+	public static void deleteFiles(ChunkInfo chunkinfo) {
+		Path path = Paths.get("./chunks/");
+
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, chunkinfo.fileId + "*")) {
+			for (final Path file : directoryStream) {
+				Files.delete(file);
+			}
+		} catch (IOException e) {
+			System.out.println("Failed to delete chunks on MCHandler.");
+		}
+	}
+
+	/**
+	 * Verifica se o tipo de mensagem recebida é válida.
+	 * @param messageType Tipo de mensagem
+	 * @return true se é um tipo aceitavel, false caso contrário
+	 */
+	private boolean checkMessageType(String messageType) {
+		if("STORED".equals(messageType) ||
+				"DELETE".equals(messageType))
+			this.messageType = messageType;
+
+		return !this.messageType.isEmpty();
 	}
 
 	/**
@@ -72,6 +91,7 @@ public class McHandler implements Runnable {
 
 	/**
 	 * Verifica se já recebeu uma mensagem de STORED igual à recebida.
+	 * TODO: Modificar isto
 	 * @param ci Mensagem recebida
 	 * @return true se já tinha recebido, false se é uma nova mensagem
 	 */

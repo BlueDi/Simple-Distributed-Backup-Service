@@ -33,14 +33,11 @@ public class Client {
 		operand_1 = args[2];
 		operand_2 = args[3];
 
-		if(!"BACKUP".equals(operation)
-				&& !"RESTORE".equals(operation) 
-				&& !"DELETE".equals(operation) 
-				&& !"RECLAIM".equals(operation) 
-				&& !"STATE".equals(operation))
-			return false;
-		
-		return true;
+		return ("BACKUP".equals(operation)
+				|| "RESTORE".equals(operation) 
+				|| "DELETE".equals(operation) 
+				|| "RECLAIM".equals(operation) 
+				|| "STATE".equals(operation));
 	}
 
 	private static void execute(){

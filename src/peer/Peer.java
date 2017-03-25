@@ -97,6 +97,13 @@ public class Peer {
 			}
 		}
 	}
+	
+	private static void sendDelete(){
+		String delete_msg = "DELETE" + " " + "1.0" + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " " + "0xD0xA";
+		byte[] confirmation = delete_msg.getBytes();
+		
+		mc.send(confirmation);
+	}
 
 	public static void execute(String peer_ap, String operation, String filePath, String replicationDegree){
 		String[] test = new String[] {"1.0", peer_ap, "test"};
@@ -126,6 +133,8 @@ public class Peer {
 					mdb.send(autoBuffer);		
 
 					sendStored();
+					
+					sendDelete();
 				}
 			};
 
