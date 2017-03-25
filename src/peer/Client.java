@@ -42,24 +42,11 @@ public class Client {
 				|| "RECLAIM".equals(operation) 
 				|| "STATE".equals(operation));
 	}
-
-	private static void execute(){
-		//Peer.execute(peer_ap, operation, operand_1, operand_2);
-		try {
-            Registry registry = LocateRegistry.getRegistry("localhost");
-            PeerInterface stub = (PeerInterface) registry.lookup("PeerInterface");
-            String response = stub.sayHello();
-            System.out.println("response: " + response);
-        } catch (Exception e) {
-            System.err.println("Client exception: " + e.toString());
-            e.printStackTrace();
-        }
-	}
 	private static void callBackup()
 	{
 		try {
             Registry registry = LocateRegistry.getRegistry("localhost");
-            PeerInterface stub = (PeerInterface) registry.lookup("PeerInterface");
+            PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
             stub.execute(peer_ap, operation, operand_1, operand_2);
         } catch (Exception e) {
             System.err.println("Client exception: " + e.toString());

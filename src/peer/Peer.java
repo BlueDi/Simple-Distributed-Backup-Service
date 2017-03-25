@@ -188,7 +188,7 @@ public class Peer implements PeerInterface {
 
 	            // Bind the remote object's stub in the registry
 	            Registry registry = LocateRegistry.getRegistry();
-	            registry.bind("PeerInterface", stub);
+	            registry.bind(srvc_accss_pnt, stub);
 
 	            System.err.println("RMI Sucessfully Registred");
 	        } catch (Exception e) {
