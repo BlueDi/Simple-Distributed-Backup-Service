@@ -11,8 +11,11 @@ import handlers.McHandler;
 import handlers.MdbHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
-
-public class Peer {
+import java.rmi.registry.Registry;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+public class Peer implements PeerInterface {
 	private static MulticastChannel mc;
 	private static MulticastChannel mdb;
 	private static MulticastChannel mdr;
@@ -148,7 +151,9 @@ public class Peer {
 			System.out.println("filePath didnt match a valid file, backup constructor in Peer.execute()");
 		}
 	}
-
+	 public String sayHello() {
+	        return "Hello, world!";
+	    }
 	/**
 	 * Função principal do programa.
 	 * @param args Argumentos passados na chamada do programa
@@ -163,7 +168,7 @@ public class Peer {
 		double version = Double.parseDouble(args[0]);
 		PEER_ID = (int) (Math.random() * 9999);//= Integer.parseInt(args[1]);
 		String srvc_accss_pnt = args[2];
-
+		System.out.println("Peer: "+srvc_accss_pnt + " started.");
 		//Iniciar ip e portas default
 		String MC_IP = "224.0.0.2";
 		int MC_PORT = 4002;
@@ -181,7 +186,27 @@ public class Peer {
 			MDR_IP = args[7];
 			MDR_PORT = Integer.parseInt(args[8]);
 		}
+		//Registring RMI
+		 try {
+	            Peer obj = new Peer();
+	            PeerInterface stub = (PeerInterface) UnicastRemoteObject.exportObject(obj, 0);
 
+	            // Bind the remote object's stub in the registry
+	            Registry registry = LocateRegistry.getRegistry();
+	            registry.bind("PeerInterface", stub);
+
+	            System.err.println("RMI Sucessfully Registred");
+	        } catch (Exception e) {
+	            System.err.println("Server exception: " + e.toString());
+	            e.printStackTrace();
+	        }
+		
+		
+		
+		
+		
+		
+		
 		mc = new MulticastChannel(MC_IP, MC_PORT);
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);

@@ -1,7 +1,8 @@
 package peer;
 
 import java.io.IOException;
-
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 public class Client {
 	private static String peer_ap;
 	private static String operation;
@@ -18,8 +19,10 @@ public class Client {
 			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2> ");
 			return;
 		}
+		
 		if(processInput(args))
 			execute();
+		
 	}
 
 	/**
@@ -41,6 +44,16 @@ public class Client {
 	}
 
 	private static void execute(){
-		Peer.execute(peer_ap, operation, operand_1, operand_2);
+		//Peer.execute(peer_ap, operation, operand_1, operand_2);
+		try {
+            Registry registry = LocateRegistry.getRegistry("localhost");
+            PeerInterface stub = (PeerInterface) registry.lookup("PeerInterface");
+            String response = stub.sayHello();
+            System.out.println("response: " + response);
+        } catch (Exception e) {
+            System.err.println("Client exception: " + e.toString());
+            e.printStackTrace();
+        }
 	}
+	
 }
