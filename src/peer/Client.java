@@ -8,12 +8,6 @@ public class Client {
 	private static String operation;
 	private static String operand_1;
 	private static String operand_2;
-
-	/**
-	 * Peer initiator function
-	 * @param args
-	 * @throws IOException
-	 */
 	public static void main(String[] args) throws IOException{
 		if (args.length < 4) {
 			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2> ");
@@ -21,7 +15,7 @@ public class Client {
 		}
 		
 		if(processInput(args))
-			callBackup();
+			callOperation();
 		
 	}
 
@@ -42,12 +36,14 @@ public class Client {
 				|| "RECLAIM".equals(operation) 
 				|| "STATE".equals(operation));
 	}
-	private static void callBackup()
+	//This function sends the arguments to a function in the peer (selected by acess point)
+	private static void callOperation()
 	{
 		try {
             Registry registry = LocateRegistry.getRegistry("localhost");
+            //This is how we select the appropriate peer
             PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
-            stub.execute(peer_ap, operation, operand_1, operand_2);
+            stub.handleOperation(operation, operand_1, operand_2);
         } catch (Exception e) {
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();

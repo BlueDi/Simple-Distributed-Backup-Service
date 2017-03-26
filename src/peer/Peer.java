@@ -196,12 +196,7 @@ public class Peer implements PeerInterface {
 	            e.printStackTrace();
 	        }
 		
-		
-		
-		
-		
-		
-		
+		 
 		mc = new MulticastChannel(MC_IP, MC_PORT);
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
@@ -210,4 +205,38 @@ public class Peer implements PeerInterface {
 		initializeListeners();
 		initializeHandlers();
 	}
+	public void handleOperation(String operation, String filePath, String replicationDegree) throws RemoteException {
+		// The client evokes this function through RMI. It then reads the operation argument and calls the apropriate method.
+		switch(operation)
+		{
+			case "BACKUP" : operationBackup(filePath,replicationDegree); break;
+			case "RESTORE" : operationRestore(filePath); break;
+			case "DELETE" : operationDelete(filePath); break;
+			case "RECLAIM" :operationReclaim(filePath); break;
+			case "STATE" : operationState(); break;
+		}
+		
+		
+	}
+	private void operationBackup(String filePath, String replicationDegree)
+	{
+		System.out.println("Backup.");
+	}
+	private void operationRestore(String filePath)
+	{
+		System.out.println("Restore.");
+	}
+	private void operationDelete(String filePath)
+	{
+		System.out.println("Delete.");
+	}
+	private void operationReclaim(String filePath)
+	{
+		System.out.println("Reclaim.");
+	}
+	public void operationState()
+	{
+		System.out.println("State.");
+	}
+	
 }
