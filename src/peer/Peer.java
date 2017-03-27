@@ -2,6 +2,10 @@ package peer;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -11,11 +15,10 @@ import handlers.McHandler;
 import handlers.MdbHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
-import java.rmi.registry.Registry;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
-public class Peer implements PeerInterface {
+
+public class Peer extends UnicastRemoteObject implements PeerInterface {
+	private static final long serialVersionUID = 1L;
+
 	private static MulticastChannel mc;
 	private static MulticastChannel mdb;
 	private static MulticastChannel mdr;
@@ -37,11 +40,15 @@ public class Peer implements PeerInterface {
 
 	private static int PEER_ID;
 
+	protected Peer() throws RemoteException {
+		super();
+	}
+
 	/**
 	 * Liga o programa aos canais multicast.
 	 * @throws IOException Falha na ligação aos canais multicast
 	 */
-	private static void joinChannels() throws IOException{
+	private static void joinChannels() throws IOException {
 		mc.join();
 		mdb.join();
 		mdr.join();
@@ -55,7 +62,6 @@ public class Peer implements PeerInterface {
 		mdbListener = new MulticastListener(mdb);
 		mdrListener = new MulticastListener(mdr);
 
-		(new Thread(mdbListener)).start();
 		mcListener_Thread = new Thread(mcListener);
 		mdbListener_Thread = new Thread(mdbListener);
 		mdrListener_Thread = new Thread(mdrListener);
@@ -82,6 +88,32 @@ public class Peer implements PeerInterface {
 		//mdrHandler_Thread.start();
 	}
 
+	/**
+	 * The client evokes this function through RMI. It then reads the operation argument and calls the apropriate method.
+	 */
+	public void handleOperation(String operation, String filePath, String replicationDegree) throws RemoteException {
+		switch(operation){
+		case "BACKUP" : 
+			operationBackup(filePath,replicationDegree); 
+			break;
+		case "RESTORE" : 
+			operationRestore(filePath); 
+			break;
+		case "DELETE" : 
+			operationDelete(filePath); 
+			break;
+		case "RECLAIM" :
+			operationReclaim(filePath); 
+			break;
+		case "STATE" : 
+			operationState(); 
+			break;
+		default:
+			System.out.println("Invalid message type.");
+			break;
+		}
+	}
+
 	private static void sendStored(){		
 		for(Chunk c: mdbHandler.getChunksReceived()){
 			if(!c.isChecked()){
@@ -100,21 +132,10 @@ public class Peer implements PeerInterface {
 			}
 		}
 	}
-	
-	private static void sendDelete(){
-		String delete_msg = "DELETE" + " " + "1.0" + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " " + "0xD0xA";
-		byte[] confirmation = delete_msg.getBytes();
-		
-		mc.send(confirmation);
-	}
 
-	public void execute(String peer_ap, String operation, String filePath, String replicationDegree){
-		String[] test = new String[] {"1.0", peer_ap, "test"};
-		
-		PEER_ID = Integer.parseInt(peer_ap);
-		Backup bckp;
+	private void operationBackup(String filePath, String replicationDegree) {
 		try {
-			bckp = new Backup(filePath, replicationDegree);
+			Backup bckp = new Backup(filePath, replicationDegree);
 			ArrayList<Chunk> chunkFiles = bckp.getChunkFiles();
 
 			ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
@@ -131,8 +152,6 @@ public class Peer implements PeerInterface {
 					mdb.send(autoBuffer);		
 
 					sendStored();
-					
-					sendDelete();
 				}
 			};
 
@@ -141,14 +160,31 @@ public class Peer implements PeerInterface {
 			executor.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
 
 		} catch (NumberFormatException e) {
-			System.out.println("replicationDegree isnt a number, backup constructor in Peer.execute()");
+			System.out.println("Error in Peer.operationBackup(). replicationDegree isnt a number.");
 		} catch (FileNotFoundException e) {
-			System.out.println("filePath didnt match a valid file, backup constructor in Peer.execute()");
+			System.out.println("Error in Peer.operationBackup(). filePath didnt match a valid file.");
 		}
 	}
-	 public String sayHello() {
-	        return "Hello, world!";
-	    }
+
+	private void operationRestore(String filePath) {
+		System.out.println("Restore.");
+	}
+
+	private void operationDelete(String filePath) {
+		String delete_msg = "DELETE" + " " + "1.0" + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " " + "0xD0xA";
+		byte[] confirmation = delete_msg.getBytes();
+
+		mc.send(confirmation);
+	}
+
+	private void operationReclaim(String filePath) {
+		System.out.println("Reclaim.");
+	}
+
+	public void operationState() {
+		System.out.println("State.");
+	}
+
 	/**
 	 * Função principal do programa.
 	 * @param args Argumentos passados na chamada do programa
@@ -161,9 +197,10 @@ public class Peer implements PeerInterface {
 			return;
 		}		
 		double version = Double.parseDouble(args[0]);
-		PEER_ID = (int) (Math.random() * 9999);//= Integer.parseInt(args[1]);
+		PEER_ID = Integer.parseInt(args[1]);
 		String srvc_accss_pnt = args[2];
 		System.out.println("Peer: "+srvc_accss_pnt + " started.");
+		
 		//Iniciar ip e portas default
 		String MC_IP = "224.0.0.2";
 		int MC_PORT = 4002;
@@ -181,22 +218,16 @@ public class Peer implements PeerInterface {
 			MDR_IP = args[7];
 			MDR_PORT = Integer.parseInt(args[8]);
 		}
+
 		//Registring RMI
-		 try {
-	            Peer obj = new Peer();
-	            PeerInterface stub = (PeerInterface) UnicastRemoteObject.exportObject(obj, 0);
+		Peer obj = new Peer();
 
-	            // Bind the remote object's stub in the registry
-	            Registry registry = LocateRegistry.getRegistry();
-	            registry.bind(srvc_accss_pnt, stub);
+		// Bind the remote object's stub in the registry
+		Registry registry = LocateRegistry.getRegistry();
+		registry.rebind(srvc_accss_pnt, obj);
 
-	            System.err.println("RMI Sucessfully Registred");
-	        } catch (Exception e) {
-	            System.err.println("Server exception: " + e.toString());
-	            e.printStackTrace();
-	        }
-		
-		 
+		System.err.println("RMI Sucessfully Registred");
+
 		mc = new MulticastChannel(MC_IP, MC_PORT);
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
@@ -205,38 +236,5 @@ public class Peer implements PeerInterface {
 		initializeListeners();
 		initializeHandlers();
 	}
-	public void handleOperation(String operation, String filePath, String replicationDegree) throws RemoteException {
-		// The client evokes this function through RMI. It then reads the operation argument and calls the apropriate method.
-		switch(operation)
-		{
-			case "BACKUP" : operationBackup(filePath,replicationDegree); break;
-			case "RESTORE" : operationRestore(filePath); break;
-			case "DELETE" : operationDelete(filePath); break;
-			case "RECLAIM" :operationReclaim(filePath); break;
-			case "STATE" : operationState(); break;
-		}
-		
-		
-	}
-	private void operationBackup(String filePath, String replicationDegree)
-	{
-		System.out.println("Backup.");
-	}
-	private void operationRestore(String filePath)
-	{
-		System.out.println("Restore.");
-	}
-	private void operationDelete(String filePath)
-	{
-		System.out.println("Delete.");
-	}
-	private void operationReclaim(String filePath)
-	{
-		System.out.println("Reclaim.");
-	}
-	public void operationState()
-	{
-		System.out.println("State.");
-	}
-	
+
 }
