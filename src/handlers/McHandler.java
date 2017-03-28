@@ -1,20 +1,27 @@
 package handlers;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.TreeSet;
 
-public class McHandler implements Runnable {
-	private Queue<String> msgQueue;
-	private TreeSet<ChunkInfo> treeofchunks = new TreeSet<ChunkInfo>();
-	private String messageType = "";
+import interfaces.Chunk;
 
-	public McHandler(Queue<String> msgQueue) {
+public class McHandler implements Runnable {
+	private int PEER_ID;
+	private Queue<String> msgQueue = new LinkedList<String>();
+	private String messageType = "";
+	private TreeSet<ChunkInfo> treeofchunks = new TreeSet<ChunkInfo>();
+	private Queue<Chunk> chunks_toSend = new LinkedList<Chunk>();
+
+	public McHandler(Queue<String> msgQueue, int id) {
 		this.msgQueue = msgQueue;
+		PEER_ID = id;
 	}
 
 	@Override
@@ -22,6 +29,10 @@ public class McHandler implements Runnable {
 		while (!Thread.currentThread().isInterrupted()){
 			analyseMessages();
 		}
+	}
+	
+	public Queue<Chunk> getChunks_toSend(){
+		return chunks_toSend;
 	}
 
 	/**
@@ -39,26 +50,11 @@ public class McHandler implements Runnable {
 				checkStoredChunk(chunkinfo);
 			}
 			else if(checkMessageType(msg[0]) && "DELETE".equals(this.messageType)){
-				ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3]);
-				
-				deleteFiles(chunkinfo);
+				deleteFiles(msg[3]);
 			}
-		}
-	}
-
-	/**
-	 * Apaga todos os ficheiros começados por fileID
-	 * @param fileID prefixo do nome do ficheiro a apagar
-	 */
-	public static void deleteFiles(ChunkInfo chunkinfo) {
-		Path path = Paths.get("./chunks/");
-
-		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, chunkinfo.fileId + "*")) {
-			for (final Path file : directoryStream) {
-				Files.delete(file);
+			else if(checkMessageType(msg[0]) && "GETCHUNK".equals(this.messageType)){
+				searchChunk(msg[3], msg[4]);
 			}
-		} catch (IOException e) {
-			System.out.println("Failed to delete chunks on MCHandler.");
 		}
 	}
 
@@ -68,8 +64,9 @@ public class McHandler implements Runnable {
 	 * @return true se é um tipo aceitavel, false caso contrário
 	 */
 	private boolean checkMessageType(String messageType) {
-		if("STORED".equals(messageType) ||
-				"DELETE".equals(messageType))
+		if("STORED".equals(messageType) 
+				|| "DELETE".equals(messageType)
+				|| "GETCHUNK".equals(messageType))
 			this.messageType = messageType;
 
 		return !this.messageType.isEmpty();
@@ -88,7 +85,7 @@ public class McHandler implements Runnable {
 				"0xD0xA".equals(msg[5]) &&
 				"0xD0xA".equals(msg[6]);
 	}
-
+	
 	/**
 	 * Verifica se já recebeu uma mensagem de STORED igual à recebida.
 	 * TODO: Modificar isto
@@ -97,6 +94,44 @@ public class McHandler implements Runnable {
 	 */
 	private boolean checkStoredChunk(ChunkInfo ci){
 		return !treeofchunks.add(ci);
+	}	
+
+	/**
+	 * Apaga todos os ficheiros começados por fileID
+	 * @param fileID prefixo do nome do ficheiro a apagar
+	 */
+	private void deleteFiles(String fileId) {
+		Path path = Paths.get("./chunks/");
+
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, fileId + "*")) {
+			for (final Path file : directoryStream) {
+				Files.delete(file);
+			}
+		} catch (IOException e) {
+			System.out.println("Failed to delete chunks on MCHandler.");
+		}
+	}
+	
+	private boolean fileExists(String path){	
+		File f = new File(path);
+		
+		return f.exists() && !f.isDirectory();
+	}
+	
+	private void searchChunk(String fileId, String chunkNo){
+		int i = Integer.parseInt(chunkNo);
+		String chunkNoStr = String.format("%03d", i);
+		
+		if(fileExists("chunks/" + fileId + chunkNoStr)){
+			Path path = Paths.get("chunks/" + fileId + chunkNoStr);
+			
+			try {
+				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
+				chunks_toSend.add(c);
+			} catch (IOException e) {
+				System.out.println("Failed to read in mcHandler.searchChunk().");
+			}
+		}
 	}
 
 	/**

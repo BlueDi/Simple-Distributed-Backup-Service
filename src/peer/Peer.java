@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import handlers.McHandler;
 import handlers.MdbHandler;
+import handlers.MdrHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
 
@@ -29,16 +30,17 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 
 	private static McHandler mcHandler;
 	private static MdbHandler mdbHandler;
-	//private static MdrHandler mdrHandler;
+	private static MdrHandler mdrHandler;
 
 	private static Thread mcListener_Thread;
 	private static Thread mdbListener_Thread;
 	private static Thread mdrListener_Thread;
 	private static Thread mcHandler_Thread;
 	private static Thread mdbHandler_Thread;
-	//private static Thread mdrHandler_Thread;
+	private static Thread mdrHandler_Thread;
 
 	private static int PEER_ID;
+	private static double VERSION;
 
 	protected Peer() throws RemoteException {
 		super();
@@ -75,17 +77,17 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	 * Inicia os Threads dos Handlers.
 	 */
 	private static void initializeHandlers(){		
-		mcHandler = new McHandler(mcListener.getQueue());
-		mdbHandler = new MdbHandler(mdbListener.getQueue());
-		//mdrHandler = new MdrHandler();
+		mcHandler = new McHandler(mcListener.getQueue(), PEER_ID);
+		mdbHandler = new MdbHandler(mdbListener.getQueue(), PEER_ID);
+		mdrHandler = new MdrHandler(mdrListener.getQueue(), PEER_ID);
 
 		mcHandler_Thread = new Thread(mcHandler);
 		mdbHandler_Thread = new Thread(mdbHandler);
-		//mdrHandler_Thread = new Thread(mdrHandler);
+		mdrHandler_Thread = new Thread(mdrHandler);
 
 		mcHandler_Thread.start();
 		mdbHandler_Thread.start();
-		//mdrHandler_Thread.start();
+		mdrHandler_Thread.start();
 	}
 
 	/**
@@ -117,15 +119,8 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static void sendStored(){		
 		for(Chunk c: mdbHandler.getChunksReceived()){
 			if(!c.isChecked()){
-				String cnfrmtn_msg = "STORED" + " " + "1.0" + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA";
+				String cnfrmtn_msg = "STORED" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA";
 				byte[] confirmation = cnfrmtn_msg.getBytes();
-
-//				try {
-//					Thread.sleep(Double.valueOf(Math.random() * 400).longValue());
-//				} catch (InterruptedException e) {
-//					System.out.println("Error when tried to wait a random delay to send the confirmation message on the MC channel.");
-//					e.printStackTrace();
-//				}
 
 				mc.send(confirmation);
 				c.setChecked(true);
@@ -145,11 +140,11 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 					System.out.println("\nSending multicast: ");
 					byte[] autoBuffer = null;
 					Chunk c = chunkFiles.remove(0);
-					String outMessage = "PUTCHUNK" + " " + "1.0" + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
+					String outMessage = "PUTCHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
 					System.out.println(outMessage);
 					autoBuffer = outMessage.getBytes();
 
-					mdb.send(autoBuffer);		
+					mdb.send(autoBuffer);
 
 					sendStored();
 				}
@@ -166,12 +161,50 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		}
 	}
 
+	/**
+	 * The format of the message is: CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
+	 */
+	private static void sendChunks(){
+		for(Chunk c: mcHandler.getChunks_toSend()){
+			System.out.println(c.getFileId()+c.getChunkNumber());
+			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
+			byte[] confirmation = cnfrmtn_msg.getBytes();
+
+			mdr.send(confirmation);
+		}
+	}
+
+	/**
+	 * The format of the message is: GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+	 * @param filePath
+	 */
 	private void operationRestore(String filePath) {
-		System.out.println("Restore.");
+		int i = 0;
+		do{
+			i++;
+			String outMessage = "GETCHUNK" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + i + " " + "0xD0xA" + " " + "0xD0xA";
+			System.out.println(outMessage);
+			byte[] buffer = outMessage.getBytes();
+
+			mc.send(buffer);
+
+			sendChunks();
+
+			//TODO: isto nao funciona mas é preciso fazer uma espera antes de receber as mensagens de receção
+			try {
+				Thread.sleep(Double.valueOf(Math.random() * 400).longValue());
+			} catch (InterruptedException e) {
+				System.out.println("Error when tried to wait a random delay to send the confirmation message on the MC channel.");
+			}
+
+		}while(!mdrHandler.isEndOfFile() && i < 20);
+
+		mdrHandler.setEndOfFile(false);
+
 	}
 
 	private void operationDelete(String filePath) {
-		String delete_msg = "DELETE" + " " + "1.0" + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " " + "0xD0xA";
+		String delete_msg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " " + "0xD0xA";
 		byte[] confirmation = delete_msg.getBytes();
 
 		mc.send(confirmation);
@@ -196,11 +229,11 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			System.out.println("Or: <protocol_version> <server_id> <service_access_point> <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
 			return;
 		}		
-		double version = Double.parseDouble(args[0]);
+		VERSION = Double.parseDouble(args[0]);
 		PEER_ID = Integer.parseInt(args[1]);
 		String srvc_accss_pnt = args[2];
 		System.out.println("Peer: "+srvc_accss_pnt + " started.");
-		
+
 		//Iniciar ip e portas default
 		String MC_IP = "224.0.0.2";
 		int MC_PORT = 4002;

@@ -30,13 +30,14 @@ public class Client {
 	}
 
 	/**
-	 * This function sends the arguments to a function in the peer (selected by acess point)
+	 * This function sends the arguments to a function in the peer (selected by acess point).
+	 * The appropriate peer is selected with registry.lookup(peer_ap).
 	 */
 	private static void callOperation() {
 		Registry registry;
+		
 		try {
 			registry = LocateRegistry.getRegistry();
-			//This is how we select the appropriate peer
 			PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
 			stub.handleOperation(operation, operand_1, operand_2);
 		} catch (RemoteException e) {
@@ -47,8 +48,10 @@ public class Client {
 	}
 	
 	public static void main(String[] args) {
-		if (args.length < 4) {
-			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2> ");
+		if (args.length < 1) {
+			System.out.println("Usage: java TestApp <peer_ap> <operation>");
+			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1>");
+			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");
 			return;
 		}
 

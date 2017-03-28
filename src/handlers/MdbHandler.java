@@ -12,11 +12,13 @@ import java.util.Queue;
 import interfaces.Chunk;
 
 public class MdbHandler implements Runnable {
+	private int PEER_ID;
 	private Queue<String> msgQueue;
 	private Queue<Chunk> chunksReceived = new LinkedList<Chunk>();
 
-	public MdbHandler(Queue<String> msgQueue) {
+	public MdbHandler(Queue<String> msgQueue, int id) {
 		this.msgQueue = msgQueue;
+		PEER_ID = id;
 	}
 
 	@Override
@@ -49,13 +51,8 @@ public class MdbHandler implements Runnable {
 				byte[] body = analyseBody(msg[8]);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
 
-				try {
-					storeChunk(chunk);
-					chunksReceived.add(chunk);
-				} catch (IOException e) {
-					System.out.println("Failed to store chunk.");
-					e.printStackTrace();
-				}
+				storeChunk(chunk);
+				chunksReceived.add(chunk);
 
 				//sendConfirmationOfStoredChunk();
 			}
@@ -106,20 +103,22 @@ public class MdbHandler implements Runnable {
 	 * @param chunk Chunk a guardar
 	 * @throws IOException Já existe um chunk com este fileId
 	 */
-	private void storeChunk(Chunk chunk) throws IOException{
+	private void storeChunk(Chunk chunk) {
 		byte data[] = chunk.getContent();
-		String numb = String.format("%03d", chunk.getChunkNumber());
-		Path path = Paths.get(("./chunks/" + chunk.getFileId() + numb ));
+		String chunkNo = String.format("%03d", chunk.getChunkNumber());
+		Path path = Paths.get(("./chunks/" + chunk.getFileId() + chunkNo ));
 
-		Files.createDirectories(path.getParent());        
 		try {
+			Files.createDirectories(path.getParent());
 			Files.createFile(path);
 			Files.write(path, data, StandardOpenOption.APPEND);
 		} catch (FileAlreadyExistsException e) {
 			System.err.println("Chunk already exists: " + e.getMessage());
+		} catch (IOException e) {
+			System.err.println("I/O error in mdbHandler storeChunk.");
 		}
 	}
-	
+
 	/**
 	 * Imprime a mensagem no ecrã.
 	 * @param msg Array de strings a ser imprimido

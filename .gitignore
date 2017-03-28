@@ -1,5 +1,6 @@
 /bin/
 /chunks
+/files
 
 *.classpath
 .project
