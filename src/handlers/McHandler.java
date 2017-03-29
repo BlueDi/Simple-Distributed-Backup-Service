@@ -30,7 +30,7 @@ public class McHandler implements Runnable {
 			analyseMessages();
 		}
 	}
-	
+
 	public Queue<Chunk> getChunks_toSend(){
 		return chunks_toSend;
 	}
@@ -85,7 +85,7 @@ public class McHandler implements Runnable {
 				"0xD0xA".equals(msg[5]) &&
 				"0xD0xA".equals(msg[6]);
 	}
-	
+
 	/**
 	 * Verifica se já recebeu uma mensagem de STORED igual à recebida.
 	 * TODO: Modificar isto
@@ -111,20 +111,20 @@ public class McHandler implements Runnable {
 			System.out.println("Failed to delete chunks on MCHandler.");
 		}
 	}
-	
+
 	private boolean fileExists(String path){	
 		File f = new File(path);
-		
+
 		return f.exists() && !f.isDirectory();
 	}
-	
+
 	private void searchChunk(String fileId, String chunkNo){
 		int i = Integer.parseInt(chunkNo);
 		String chunkNoStr = String.format("%03d", i);
-		
+
 		if(fileExists("chunks/" + fileId + chunkNoStr)){
 			Path path = Paths.get("chunks/" + fileId + chunkNoStr);
-			
+
 			try {
 				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
 				chunks_toSend.add(c);

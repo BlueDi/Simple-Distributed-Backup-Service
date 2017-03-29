@@ -128,6 +128,21 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		}
 	}
 
+	/**
+	 * Junta dois byte arrays.
+	 * @param first array para colocar no inicio do novo array
+	 * @param second array para colocar no fim do novo array
+	 * @return Array = first + second
+	 */
+	private byte[] joinArrays(byte[] first, byte[] second){
+		byte[] destination = new byte[first.length + second.length];
+
+		System.arraycopy(first, 0, destination, 0, first.length);
+		System.arraycopy(second, 0, destination, first.length, second.length);
+
+		return destination;
+	}
+
 	private void operationBackup(String filePath, String replicationDegree) {
 		try {
 			Backup bckp = new Backup(filePath, replicationDegree);
@@ -137,12 +152,13 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 
 			Runnable task = () -> {
 				if(!chunkFiles.isEmpty()){
-					System.out.println("\nSending multicast: ");
-					byte[] autoBuffer = null;
+					System.out.println("\nSending multicast BACKUP: ");
+					byte[] autoBuffer = new byte[65000];
 					Chunk c = chunkFiles.remove(0);
-					String outMessage = "PUTCHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
-					System.out.println(outMessage);
-					autoBuffer = outMessage.getBytes();
+					String outMessage = "PUTCHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " ";
+					System.out.println(outMessage + "<body>");
+
+					autoBuffer = joinArrays(outMessage.getBytes(), c.getContent());
 
 					mdb.send(autoBuffer);
 
@@ -197,10 +213,8 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 				System.out.println("Error when tried to wait a random delay to send the confirmation message on the MC channel.");
 			}
 
-		}while(!mdrHandler.isEndOfFile() && i < 20);
-
-		mdrHandler.setEndOfFile(false);
-
+			System.out.println("Oper Restore check if chunk is endoffile: " + mdrHandler.isEndOfFile());
+		}while(!mdrHandler.isEndOfFile());
 	}
 
 	private void operationDelete(String filePath) {

@@ -92,8 +92,9 @@ public class MdbHandler implements Runnable {
 	 * @return
 	 */
 	private byte[] analyseBody(String msg){
-		byte[] destination = null;
+		byte[] destination = new byte[64000];
 		destination = msg.getBytes();
+		System.out.println("Received a body of size " +  destination.length + " bytes.");
 		return destination;
 	}
 

@@ -10,7 +10,7 @@ public class Backup {
 	private String filepath; // used to get the file
 	private int replicationLevel;
 	private ArrayList<Chunk> chunkFiles = new ArrayList<Chunk>();
-	private int READ_LENGTH = 6400;
+	private int READ_LENGTH = 64000;
 
 	/**
 	 * Retorna um array com os chunks que são necessários enviar.
@@ -52,26 +52,32 @@ public class Backup {
 	 */
 	public void splitFile() throws FileNotFoundException{
 		File bckFile = new File(this.filepath);
-		System.out.println(bckFile.getAbsolutePath());
+
+		System.out.println("Backing up file " + bckFile.getAbsolutePath());
 		FileInputStream readStream;
-		int fileS = (int) bckFile.length();
+		int fileSize = (int) bckFile.length();
+		System.out.println("File size is: " + fileSize + " bytes.");
 		int chunkNo = 0;
 		byte[] byteChunkPart;
 
 		readStream = new FileInputStream(bckFile);
-		while(fileS > 0){
+
+		while(fileSize > 0){
 			int toRead = READ_LENGTH;
-			if(fileS < READ_LENGTH)
-				toRead = fileS;
+
+			if(fileSize < READ_LENGTH)
+				toRead = fileSize;
+
 			byteChunkPart = new byte[toRead];
 
 			try {
-				fileS -= readStream.read(byteChunkPart, 0, toRead);
+				fileSize -= readStream.read(byteChunkPart, 0, toRead);
 				chunkNo++;
+				System.out.println("leu: " + byteChunkPart.length);
 				Chunk chunk = new Chunk(filepath, chunkNo, replicationLevel, byteChunkPart);
 				this.chunkFiles.add(chunk);
 			} catch (IOException e) {
-				System.out.println("Failed to read from file.");
+				System.out.println("Failed to read from file in Backup.splitFile().");
 				e.printStackTrace();
 			}
 		}
@@ -79,8 +85,7 @@ public class Backup {
 		try {
 			readStream.close();
 		} catch (IOException e) {
-			System.out.println("Failed to close the file.");
-			e.printStackTrace();
+			System.out.println("Failed to close the file in Backup.splitFile().");
 		}
 
 	}

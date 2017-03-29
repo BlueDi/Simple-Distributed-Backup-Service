@@ -1,6 +1,7 @@
 package handlers;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +16,6 @@ public class MdrHandler implements Runnable {
 	private int PEER_ID;
 	private Queue<String> msgQueue = new LinkedList<String>();
 	private Queue<Chunk> chunksRequests = new LinkedList<Chunk>();
-	private boolean endOfFile = false;
 
 	public MdrHandler(Queue<String> msgQueue, int id) {
 		this.msgQueue = msgQueue;
@@ -35,19 +35,15 @@ public class MdrHandler implements Runnable {
 	public Queue<Chunk> getRequests() {
 		return chunksRequests;
 	}
-	
+
 	/**
 	 * @return the endOfFile
 	 */
 	public boolean isEndOfFile() {
-		return endOfFile;
-	}
-
-	/**
-	 * @param endOfFile the endOfFile to set
-	 */
-	public void setEndOfFile(boolean endOfFile) {
-		this.endOfFile = endOfFile;
+		System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
+		if(chunksRequests.isEmpty())
+			return false;
+		return chunksRequests.poll().isEndOfFile();
 	}
 
 	/**
@@ -66,9 +62,10 @@ public class MdrHandler implements Runnable {
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
 				chunksRequests.add(chunk);
-				
+
+				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());				
+
 				if(chunk.isEndOfFile()){
-					setEndOfFile(true);
 					createFile(msg[3]);
 				}
 			}
@@ -92,9 +89,9 @@ public class MdrHandler implements Runnable {
 	 * @return true se o cabeçalho é válido
 	 */
 	private boolean analyseHeader(String[] msg){
-		return "1.0".equals(msg[1]) && 
-				"0xD0xA".equals(msg[5]) &&
-				"0xD0xA".equals(msg[6]);
+		return "1.0".equals(msg[1]) 
+				&& "0xD0xA".equals(msg[5]) 
+				&& "0xD0xA".equals(msg[6]);
 	}
 
 	/**
@@ -137,6 +134,16 @@ public class MdrHandler implements Runnable {
 			Files.createDirectories(path.getParent());
 			Files.createFile(path);
 			Files.write(path, data, StandardOpenOption.APPEND);
+
+			//TODO
+			String s = new String(data);
+			System.out.println("Text Decrypted : " + s);
+
+			PrintWriter out = new PrintWriter("coiseeeeeeeeeee.txt");
+			out.println(s);
+			out.close();
+			//não é preciso este PrintWriter, é só para testes
+
 		} catch (FileAlreadyExistsException e) {
 			System.err.println("File already exists: " + e.getMessage());
 		} catch (IOException e) {

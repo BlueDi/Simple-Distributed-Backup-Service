@@ -35,7 +35,7 @@ public class Client {
 	 */
 	private static void callOperation() {
 		Registry registry;
-		
+
 		try {
 			registry = LocateRegistry.getRegistry();
 			PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
@@ -46,7 +46,7 @@ public class Client {
 			System.out.println("Error in Client.callOperation(). Registry tried to lookup but the name is not currently bounded.");
 		}
 	}
-	
+
 	public static void main(String[] args) {
 		if (args.length < 1) {
 			System.out.println("Usage: java TestApp <peer_ap> <operation>");
