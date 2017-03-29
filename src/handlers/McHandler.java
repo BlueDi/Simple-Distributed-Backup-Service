@@ -17,7 +17,7 @@ public class McHandler implements Runnable {
 	private Queue<String> msgQueue = new LinkedList<String>();
 	private String messageType = "";
 	private TreeSet<ChunkInfo> treeofchunks = new TreeSet<ChunkInfo>();
-	private Queue<Chunk> chunks_toSend = new LinkedList<Chunk>();
+	private Queue<Chunk> chunksToSend = new LinkedList<Chunk>();
 
 	public McHandler(Queue<String> msgQueue, int id) {
 		this.msgQueue = msgQueue;
@@ -31,8 +31,8 @@ public class McHandler implements Runnable {
 		}
 	}
 
-	public Queue<Chunk> getChunks_toSend(){
-		return chunks_toSend;
+	public Queue<Chunk> getChunksToSend(){
+		return chunksToSend;
 	}
 
 	/**
@@ -127,7 +127,7 @@ public class McHandler implements Runnable {
 
 			try {
 				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
-				chunks_toSend.add(c);
+				chunksToSend.add(c);
 			} catch (IOException e) {
 				System.out.println("Failed to read in mcHandler.searchChunk().");
 			}

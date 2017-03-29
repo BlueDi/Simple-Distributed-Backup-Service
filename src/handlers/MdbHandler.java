@@ -126,8 +126,8 @@ public class MdbHandler implements Runnable {
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDB: ");
-		for(int i = 0; i < msg.length; i++)
+		for(int i = 0; i < msg.length-1; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.println();
+		System.out.print("<body>\n");
 	}
 }

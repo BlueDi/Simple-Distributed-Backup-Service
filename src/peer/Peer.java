@@ -180,12 +180,12 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	/**
 	 * The format of the message is: CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
 	 */
-	private static void sendChunks(){
-		for(Chunk c: mcHandler.getChunks_toSend()){
-			System.out.println(c.getFileId()+c.getChunkNumber());
-			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA" + " " + c.getContent();
-			byte[] confirmation = cnfrmtn_msg.getBytes();
-
+	private void sendChunks(){
+		while(!mcHandler.getChunksToSend().isEmpty()){
+			Chunk c = mcHandler.getChunksToSend().poll();
+			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA" + " ";
+			byte[] confirmation = joinArrays(cnfrmtn_msg.getBytes(), c.getContent());
+			
 			mdr.send(confirmation);
 		}
 	}
@@ -212,8 +212,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			} catch (InterruptedException e) {
 				System.out.println("Error when tried to wait a random delay to send the confirmation message on the MC channel.");
 			}
-
-			System.out.println("Oper Restore check if chunk is endoffile: " + mdrHandler.isEndOfFile());
 		}while(!mdrHandler.isEndOfFile());
 	}
 

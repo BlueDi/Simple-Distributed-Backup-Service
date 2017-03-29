@@ -1,7 +1,6 @@
 package handlers;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,13 +8,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Stack;
 
 import interfaces.Chunk;
 
 public class MdrHandler implements Runnable {
 	private int PEER_ID;
 	private Queue<String> msgQueue = new LinkedList<String>();
-	private Queue<Chunk> chunksRequests = new LinkedList<Chunk>();
+	private Stack<Chunk> chunksRequests = new Stack<Chunk>();
 
 	public MdrHandler(Queue<String> msgQueue, int id) {
 		this.msgQueue = msgQueue;
@@ -32,7 +32,7 @@ public class MdrHandler implements Runnable {
 	/**
 	 * @return the chunksReceived
 	 */
-	public Queue<Chunk> getRequests() {
+	public Stack<Chunk> getRequests() {
 		return chunksRequests;
 	}
 
@@ -40,10 +40,9 @@ public class MdrHandler implements Runnable {
 	 * @return the endOfFile
 	 */
 	public boolean isEndOfFile() {
-		System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
 		if(chunksRequests.isEmpty())
 			return false;
-		return chunksRequests.poll().isEndOfFile();
+		return chunksRequests.peek().isEndOfFile();
 	}
 
 	/**
@@ -51,7 +50,7 @@ public class MdrHandler implements Runnable {
 	 */
 	private void analyseMessages(){
 		if (!msgQueue.isEmpty()) {
-			String[] msg = msgQueue.poll().split("\\s",9);
+			String[] msg = msgQueue.poll().split("\\s",8);
 
 			if(checkValidMessageType(msg[0])){
 				print(msg);
@@ -59,11 +58,12 @@ public class MdrHandler implements Runnable {
 				analyseHeader(msg);
 
 				byte[] body = analyseBody(msg[7]);
+				System.out.println("body size: " + body.length);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
-				chunksRequests.add(chunk);
+				chunksRequests.push(chunk);
 
-				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());				
+				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());		
 
 				if(chunk.isEndOfFile()){
 					createFile(msg[3]);
@@ -126,24 +126,16 @@ public class MdrHandler implements Runnable {
 		byte[] data = new byte[0];
 		Path path = Paths.get(("./files/" + fileId));
 
-		for(Chunk c: chunksRequests)
+		while(!chunksRequests.isEmpty()){
+			Chunk c = chunksRequests.pop();
 			if(c.getFileId().equals(fileId))
-				data = joinArrays(data, c.getContent());
+				data = joinArrays(c.getContent(), data);
+		}
 
 		try {
 			Files.createDirectories(path.getParent());
 			Files.createFile(path);
 			Files.write(path, data, StandardOpenOption.APPEND);
-
-			//TODO
-			String s = new String(data);
-			System.out.println("Text Decrypted : " + s);
-
-			PrintWriter out = new PrintWriter("coiseeeeeeeeeee.txt");
-			out.println(s);
-			out.close();
-			//não é preciso este PrintWriter, é só para testes
-
 		} catch (FileAlreadyExistsException e) {
 			System.err.println("File already exists: " + e.getMessage());
 		} catch (IOException e) {
@@ -157,8 +149,8 @@ public class MdrHandler implements Runnable {
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDR: ");
-		for(int i = 0; i < msg.length; i++)
+		for(int i = 0; i < msg.length-1; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.println();
+		System.out.print("<body>\n");
 	}
 }
