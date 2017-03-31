@@ -1,7 +1,6 @@
 package peer;
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.Queue;
 

@@ -96,10 +96,10 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	public void handleOperation(String operation, String filePath, String replicationDegree) throws RemoteException {
 		switch(operation){
 		case "BACKUP" : 
-			operationBackup(filePath,replicationDegree); 
+			operationBackup(filePath, replicationDegree); 
 			break;
 		case "RESTORE" : 
-			operationRestore(filePath); 
+			operationRestore(filePath + "."); 
 			break;
 		case "DELETE" : 
 			operationDelete(filePath); 
@@ -185,7 +185,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			Chunk c = mcHandler.getChunksToSend().poll();
 			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " " + c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA" + " ";
 			byte[] confirmation = joinArrays(cnfrmtn_msg.getBytes(), c.getContent());
-			
+
 			mdr.send(confirmation);
 		}
 	}

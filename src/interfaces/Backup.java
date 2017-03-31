@@ -1,8 +1,10 @@
 package interfaces;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -52,45 +54,78 @@ public class Backup {
 	 */
 	public void splitFile() throws FileNotFoundException{
 		File bckFile = new File(this.filepath);
+//		//FileInputStream readStream = new FileInputStream(bckFile);
+//
+//		System.out.println("Backing up file: " + bckFile.getAbsolutePath());
+//		int fileSize = (int) bckFile.length();
+//		System.out.println("File size is: " + fileSize + " bytes.");
+//		int chunkNo = 0;
+//		byte[] byteChunkPart;
+//
+//
+//		while(fileSize > 0){
+//			int toRead = READ_LENGTH;
+//
+//			if(fileSize < READ_LENGTH)
+//				toRead = fileSize;
+//
+//			byteChunkPart = new byte[toRead];
+//
+//			try  (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(bckFile))) {
+//				fileSize -= bis.read(byteChunkPart, 0, toRead);
+//				chunkNo++;
+//				System.out.println("Leu: " + byteChunkPart.length);
+//				Chunk chunk = new Chunk(filepath, chunkNo, replicationLevel, byteChunkPart);
+//				this.chunkFiles.add(chunk);
+//			} catch (IOException e) {
+//				System.out.println("Failed to read from file in Backup.splitFile(). " + e.getMessage());
+//			}
+//		}
 
-		System.out.println("Backing up file " + bckFile.getAbsolutePath());
-		FileInputStream readStream;
-		int fileSize = (int) bckFile.length();
-		System.out.println("File size is: " + fileSize + " bytes.");
-		int chunkNo = 0;
-		byte[] byteChunkPart;
 
-		readStream = new FileInputStream(bckFile);
+		//        try (BufferedInputStream bis = new BufferedInputStream(readStream)) {//try-with-resources to ensure closing stream
+		//            String name = bckFile.getName();
+		//
+		//            int tmp = 0;
+		//            while ((tmp = bis.read(byteChunkPart)) > 0) {
+		//                //write each chunk of data into separate file with different number in name
+		//                File newFile = new File(bckFile.getParent(), name + "." + String.format("%03d", chunkNo++));
+		//                try (FileOutputStream out = new FileOutputStream(newFile)) {
+		//                    out.write(byteChunkPart, 0, tmp);
+		//                }
+		//            }
+		//        } catch (IOException e1) {
+		//			e1.printStackTrace();
+		//		}
 
-		while(fileSize > 0){
-			int toRead = READ_LENGTH;
 
-			if(fileSize < READ_LENGTH)
-				toRead = fileSize;
+		int partCounter = 1;//I like to name parts from 001, 002, 003, ...
+		//you can change it to 0 if you want 000, 001, ...
 
-			byteChunkPart = new byte[toRead];
+		int sizeOfFiles = 64000;
+		byte[] buffer = new byte[sizeOfFiles];
 
-			try {
-				fileSize -= readStream.read(byteChunkPart, 0, toRead);
-				chunkNo++;
-				System.out.println("leu: " + byteChunkPart.length);
-				Chunk chunk = new Chunk(filepath, chunkNo, replicationLevel, byteChunkPart);
-				this.chunkFiles.add(chunk);
-			} catch (IOException e) {
-				System.out.println("Failed to read from file in Backup.splitFile().");
-				e.printStackTrace();
+		try (BufferedInputStream bis = new BufferedInputStream(
+				new FileInputStream(bckFile))) {//try-with-resources to ensure closing stream
+			String name = bckFile.getName();
+
+			int tmp = 0;
+			while ((tmp = bis.read(buffer)) > 0) {
+				//write each chunk of data into separate file with different number in name
+				File newFile = new File(bckFile.getParent(), "chunks/" + name + "."
+						+ String.format("%03d", partCounter++));
+				try (FileOutputStream out = new FileOutputStream(newFile)) {
+					out.write(buffer, 0, tmp);//tmp is chunk size
+				}
 			}
-		}
-
-		try {
-			readStream.close();
 		} catch (IOException e) {
-			System.out.println("Failed to close the file in Backup.splitFile().");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
 	}
 
 	private void sendingData(){
-		System.out.println("numero de chunks: " + chunkFiles.size());
+		System.out.println("Número de chunks: " + chunkFiles.size());
 	}
 }
