@@ -16,10 +16,7 @@ public class Chunk implements Comparable<Chunk> {
 		this.content = content;
 		this.checked = false;
 
-		System.out.println("Chunk received " + content.length);
-		System.out.println("Chunk stored " + this.content.length);
-
-		if(this.content.length < MAX_CHUNK_SIZE)
+		if (this.content.length < MAX_CHUNK_SIZE)
 			this.endOfFile = true;
 	}
 
@@ -30,7 +27,7 @@ public class Chunk implements Comparable<Chunk> {
 		this.content = content;
 		this.checked = false;
 
-		if(this.content.length < MAX_CHUNK_SIZE)
+		if (this.content.length < MAX_CHUNK_SIZE)
 			this.endOfFile = true;
 	}
 
@@ -49,7 +46,8 @@ public class Chunk implements Comparable<Chunk> {
 	}
 
 	/**
-	 * @param check the check to set
+	 * @param check
+	 *            the check to set
 	 */
 	public void setChecked(boolean checked) {
 		this.checked = checked;
@@ -73,6 +71,7 @@ public class Chunk implements Comparable<Chunk> {
 
 	@Override
 	public int compareTo(Chunk chunk2) {
-		return fileId.equals(chunk2.fileId) && chunkNumber == chunk2.chunkNumber ? 0 : (chunkNumber - chunk2.getChunkNumber());
+		return fileId.equals(chunk2.fileId) && chunkNumber == chunk2.chunkNumber ? 0
+				: (chunkNumber - chunk2.getChunkNumber());
 	}
 }

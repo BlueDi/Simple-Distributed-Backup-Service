@@ -12,9 +12,11 @@ public class Client {
 	private static String operand_2;
 
 	/**
-	 * Verifica se os argumentos passados são válidos.
-	 * TODO: resto das verificações dos argumentos. Ainda só está feito para a operation.
-	 * @param args Argumentos passados na consola
+	 * Verifica se os argumentos passados são válidos. TODO: resto das
+	 * verificações dos argumentos. Ainda só está feito para a operation.
+	 * 
+	 * @param args
+	 *            Argumentos passados na consola
 	 */
 	private static boolean processInput(String[] args) {
 		peer_ap = args[0];
@@ -22,16 +24,14 @@ public class Client {
 		operand_1 = args[2];
 		operand_2 = args[3];
 
-		return ("BACKUP".equals(operation)
-				|| "RESTORE".equals(operation) 
-				|| "DELETE".equals(operation) 
-				|| "RECLAIM".equals(operation) 
-				|| "STATE".equals(operation));
+		return ("BACKUP".equals(operation) || "RESTORE".equals(operation) || "DELETE".equals(operation)
+				|| "RECLAIM".equals(operation) || "STATE".equals(operation));
 	}
 
 	/**
-	 * This function sends the arguments to a function in the peer (selected by acess point).
-	 * The appropriate peer is selected with registry.lookup(peer_ap).
+	 * This function sends the arguments to a function in the peer (selected by
+	 * acess point). The appropriate peer is selected with
+	 * registry.lookup(peer_ap).
 	 */
 	private static void callOperation() {
 		Registry registry;
@@ -41,9 +41,11 @@ public class Client {
 			PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
 			stub.handleOperation(operation, operand_1, operand_2);
 		} catch (RemoteException e) {
-			System.out.println("Error in Client.callOperation(). Reference could not be created or communication with the registry failed.");
+			System.out.println(
+					"Error in Client.callOperation(). Reference could not be created or communication with the registry failed.");
 		} catch (NotBoundException e) {
-			System.out.println("Error in Client.callOperation(). Registry tried to lookup but the name is not currently bounded.");
+			System.out.println(
+					"Error in Client.callOperation(). Registry tried to lookup but the name is not currently bounded.");
 		}
 	}
 
@@ -55,7 +57,7 @@ public class Client {
 			return;
 		}
 
-		if(processInput(args))
+		if (processInput(args))
 			callOperation();
 	}
 

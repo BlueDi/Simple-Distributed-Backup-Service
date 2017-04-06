@@ -15,17 +15,17 @@ import interfaces.Chunk;
 
 public class MdrHandler implements Runnable {
 	private int PEER_ID;
-	private Queue<String> msgQueue = new LinkedList<String>();
+	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
 	private Stack<Chunk> chunksRequests = new Stack<Chunk>();
 
-	public MdrHandler(Queue<String> msgQueue, int id) {
+	public MdrHandler(Queue<byte[]> msgQueue, int id) {
 		this.msgQueue = msgQueue;
 		PEER_ID = id;
 	}
 
 	@Override
 	public void run() {
-		while (!Thread.currentThread().isInterrupted()){
+		while (!Thread.currentThread().isInterrupted()) {
 			analyseMessages();
 		}
 	}
@@ -41,19 +41,22 @@ public class MdrHandler implements Runnable {
 	 * @return the endOfFile
 	 */
 	public boolean isEndOfFile() {
-		if(chunksRequests.isEmpty())
+		if (chunksRequests.isEmpty())
 			return false;
 		return chunksRequests.peek().isEndOfFile();
 	}
 
 	/**
-	 * Analisa todas as mensagens armazenadas e cria o ficheiro se recebeu o último chunk do ficheiro.
+	 * Analisa todas as mensagens armazenadas e cria o ficheiro se recebeu o
+	 * último chunk do ficheiro.
 	 */
-	private void analyseMessages(){
+	private void analyseMessages() {
 		if (!msgQueue.isEmpty()) {
-			String[] msg = msgQueue.poll().split("\\s",8);
+			byte[] data = msgQueue.poll();
+			String convert = new String(data, 0, data.length);
+			String[] msg = convert.split("\\s", 8);
 
-			if(checkValidMessageType(msg[0])){
+			if (checkValidMessageType(msg[0])) {
 				print(msg);
 
 				analyseHeader(msg);
@@ -64,9 +67,9 @@ public class MdrHandler implements Runnable {
 
 				chunksRequests.push(chunk);
 
-				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());		
+				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
 
-				if(chunk.isEndOfFile()){
+				if (chunk.isEndOfFile()) {
 					createFile(msg[3]);
 				}
 			}
@@ -74,75 +77,77 @@ public class MdrHandler implements Runnable {
 	}
 
 	/**
-	 * Verifica se a mensagem recebida é válida.
-	 * A primeira verificação é se o MessageType está correto.
-	 * @param messageType MessageType recebido
+	 * Verifica se a mensagem recebida é válida. A primeira verificação é se o
+	 * MessageType está correto.
+	 * 
+	 * @param messageType
+	 *            MessageType recebido
 	 * @return True se tem o MessageType correto
 	 */
-	private boolean checkValidMessageType(String messageType){
+	private boolean checkValidMessageType(String messageType) {
 		return "CHUNK".equals(messageType);
 	}
 
 	/**
-	 * Analisa o cabeçalho da mensagem.
-	 * TODO: Encriptação do FileId
-	 * @param msg Mensagem recebida
+	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * 
+	 * @param msg
+	 *            Mensagem recebida
 	 * @return true se o cabeçalho é válido
 	 */
-	private boolean analyseHeader(String[] msg){
-		return "1.0".equals(msg[1]) 
-				&& "0xD0xA".equals(msg[5]) 
-				&& "0xD0xA".equals(msg[6]);
+	private boolean analyseHeader(String[] msg) {
+		return "1.0".equals(msg[1]) && "0xD0xA".equals(msg[5]) && "0xD0xA".equals(msg[6]);
 	}
 
 	/**
-	 * Analisa o body da mensagem.
-	 * Converte o body de string para byte[].
-	 * TODO: Não sei se é útil.
-	 * @param msg em string
+	 * Analisa o body da mensagem. Converte o body de string para byte[]. TODO:
+	 * Não sei se é útil.
+	 * 
+	 * @param msg
+	 *            em string
 	 * @return body como byte[]
 	 */
-	private byte[] analyseBody(String msg){
+	private byte[] analyseBody(String msg) {
 		byte[] destination = null;
 		destination = msg.getBytes();
 		return destination;
 	}
 
-//	/**
-//	 * Junta dois byte arrays.
-//	 * @param first array para colocar no inicio do novo array
-//	 * @param second array para colocar no fim do novo array
-//	 * @return Array = first + second
-//	 */
-//	private byte[] joinArrays(byte[] first, byte[] second){
-//		byte[] destination = new byte[first.length + second.length];
-//
-//		System.arraycopy(first, 0, destination, 0, first.length);
-//		System.arraycopy(second, 0, destination, first.length, second.length);
-//
-//		return destination;
-//	}
+	// /**
+	// * Junta dois byte arrays.
+	// * @param first array para colocar no inicio do novo array
+	// * @param second array para colocar no fim do novo array
+	// * @return Array = first + second
+	// */
+	// private byte[] joinArrays(byte[] first, byte[] second){
+	// byte[] destination = new byte[first.length + second.length];
+	//
+	// System.arraycopy(first, 0, destination, 0, first.length);
+	// System.arraycopy(second, 0, destination, first.length, second.length);
+	//
+	// return destination;
+	// }
 
 	private void createFile(String fileId) {
-//		byte[] data = new byte[0];
-//		Path path = Paths.get(("./files/" + fileId));
-//
-//		while(!chunksRequests.isEmpty()){
-//			Chunk c = chunksRequests.pop();
-//			if(c.getFileId().equals(fileId))
-//				data = joinArrays(c.getContent(), data);
-//		}		
-//
-//		try {
-//			Files.createDirectories(path.getParent());
-//			Files.createFile(path);
-//			Files.write(path, data, StandardOpenOption.APPEND);
-//		} catch (FileAlreadyExistsException e) {
-//			System.err.println("File already exists: " + e.getMessage());
-//		} catch (IOException e) {
-//			System.err.println("I/O error in mdrHandler createFile.");
-//		}
-		
+		// byte[] data = new byte[0];
+		// Path path = Paths.get(("./files/" + fileId));
+		//
+		// while(!chunksRequests.isEmpty()){
+		// Chunk c = chunksRequests.pop();
+		// if(c.getFileId().equals(fileId))
+		// data = joinArrays(c.getContent(), data);
+		// }
+		//
+		// try {
+		// Files.createDirectories(path.getParent());
+		// Files.createFile(path);
+		// Files.write(path, data, StandardOpenOption.APPEND);
+		// } catch (FileAlreadyExistsException e) {
+		// System.err.println("File already exists: " + e.getMessage());
+		// } catch (IOException e) {
+		// System.err.println("I/O error in mdrHandler createFile.");
+		// }
+
 		try {
 			mergeFiles("./chunks/" + fileId, "./files/" + fileId);
 		} catch (IOException e) {
@@ -151,11 +156,8 @@ public class MdrHandler implements Runnable {
 		}
 	}
 
-
-	public static void mergeFiles(List<File> files, File into)
-			throws IOException {
-		try (BufferedOutputStream mergingStream = new BufferedOutputStream(
-				new FileOutputStream(into))) {
+	public static void mergeFiles(List<File> files, File into) throws IOException {
+		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
 			for (File f : files) {
 				Files.copy(f.toPath(), mergingStream);
 			}
@@ -163,16 +165,16 @@ public class MdrHandler implements Runnable {
 	}
 
 	public static List<File> listOfFilesToMerge(File oneOfFiles) {
-		String tmpName = oneOfFiles.getName();//{name}.{number}
-		String destFileName = tmpName.substring(0, tmpName.lastIndexOf('.'));//remove .{number}
-		File[] files = oneOfFiles.getParentFile().listFiles(
-				(File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
-		Arrays.sort(files);//ensuring order 001, 002, ..., 010, ...
+		String tmpName = oneOfFiles.getName();// {name}.{number}
+		String destFileName = tmpName.substring(0, tmpName.lastIndexOf('.'));// remove
+																				// .{number}
+		File[] files = oneOfFiles.getParentFile()
+				.listFiles((File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
+		Arrays.sort(files);// ensuring order 001, 002, ..., 010, ...
 		return Arrays.asList(files);
 	}
 
-	public static void mergeFiles(File oneOfFiles, File into)
-			throws IOException {
+	public static void mergeFiles(File oneOfFiles, File into) throws IOException {
 		mergeFiles(listOfFilesToMerge(oneOfFiles), into);
 	}
 
@@ -180,17 +182,19 @@ public class MdrHandler implements Runnable {
 		return listOfFilesToMerge(new File(oneOfFiles));
 	}
 
-	public static void mergeFiles(String oneOfFiles, String into) throws IOException{
+	public static void mergeFiles(String oneOfFiles, String into) throws IOException {
 		mergeFiles(new File(oneOfFiles), new File(into));
 	}
 
 	/**
 	 * Imprime a mensagem no ecrã.
-	 * @param msg Array de strings a ser imprimido
+	 * 
+	 * @param msg
+	 *            Array de strings a ser imprimido
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDR: ");
-		for(int i = 0; i < msg.length-1; i++)
+		for (int i = 0; i < msg.length - 1; i++)
 			System.out.print(msg[i] + "; ");
 		System.out.print("<body>\n");
 	}

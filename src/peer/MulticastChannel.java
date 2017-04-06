@@ -10,11 +10,12 @@ import java.util.Arrays;
 public class MulticastChannel {
 	private InetAddress group;
 	private int PORT;
-	//private int NUMBER_OF_CONFIRMATIONS;
+	// private int NUMBER_OF_CONFIRMATIONS;
 	private MulticastSocket socket = null;
 
 	/**
 	 * Cria o canal para multicast.
+	 * 
 	 * @param ip
 	 * @param port
 	 * @throws UnknownHostException
@@ -22,23 +23,26 @@ public class MulticastChannel {
 	public MulticastChannel(String ip, int port) throws UnknownHostException {
 		this.group = InetAddress.getByName(ip);
 		this.PORT = port;
-		//this.NUMBER_OF_CONFIRMATIONS = 0;
+		// this.NUMBER_OF_CONFIRMATIONS = 0;
 	}
 
 	/**
 	 * Liga o socket ao grupo.
+	 * 
 	 * @throws IOException
 	 */
 	public void join() throws IOException {
 		socket = new MulticastSocket(PORT);
-		//socket.setTimeToLive(1);
+		// socket.setTimeToLive(1);
 		socket.joinGroup(group);
-		//socket.setLoopbackMode(true);
+		// socket.setLoopbackMode(true);
 	}
 
 	/**
 	 * Envia um DatagramPacket com a informação de toSend para a rede multicast.
-	 * @param toSend Dados a ser enviados sob a forma de byte[]
+	 * 
+	 * @param toSend
+	 *            Dados a ser enviados sob a forma de byte[]
 	 * @throws IOException
 	 */
 	public void send(byte[] toSend) {
@@ -53,7 +57,9 @@ public class MulticastChannel {
 
 	/**
 	 * Recebe da rede multicast.
-	 * @param buf buffer a ser preenchido
+	 * 
+	 * @param buf
+	 *            buffer a ser preenchido
 	 * @return byte[] com data recebida
 	 * @throws IOException
 	 */
@@ -66,6 +72,7 @@ public class MulticastChannel {
 
 	/**
 	 * Fecha o socket.
+	 * 
 	 * @throws IOException
 	 */
 	public void close() throws IOException {
