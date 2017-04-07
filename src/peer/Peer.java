@@ -14,7 +14,7 @@ import handlers.MdbHandler;
 import handlers.MdrHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
-
+import java.io.*;
 public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static final long serialVersionUID = 1L;
 
@@ -40,6 +40,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static int PEER_ID;
 	private static double VERSION;
 
+	private static ArrayList<FileInformation> fileList;
 	protected Peer() throws RemoteException {
 		super();
 	}
@@ -219,7 +220,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		String delete_msg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " "
 				+ "0xD0xA";
 		byte[] confirmation = delete_msg.getBytes();
-
+		
 		mc.send(confirmation);
 	}
 
@@ -229,6 +230,13 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 
 	public void operationState() {
 		System.out.println("State.");
+		File[] files = new File("C:/Users/Ricardo/Documents/GitHub/SDIS/chunks").listFiles();
+		for (File file : files) {
+		    if (file.isFile()) {
+		        System.out.println(file.getName());
+		    }
+		}
+
 	}
 
 	/**
@@ -277,8 +285,9 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		Registry registry = LocateRegistry.getRegistry();
 		registry.rebind(srvc_accss_pnt, obj);
 
+		
 		System.err.println("RMI Sucessfully Registred");
-
+		fileList = new ArrayList<FileInformation>();
 		mc = new MulticastChannel(MC_IP, MC_PORT);
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
 		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
