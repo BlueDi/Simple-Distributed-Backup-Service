@@ -42,7 +42,7 @@ public class McHandler implements Runnable {
 		if (!msgQueue.isEmpty()) {
 			byte[] data = msgQueue.poll();
 			String convert = new String(data, 0, data.length);
-			String[] msg = convert.split("\\s", 7);
+			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 
 			print(msg);
 
@@ -81,9 +81,7 @@ public class McHandler implements Runnable {
 	 * @return true se o cabeçalho é válido
 	 */
 	private boolean analyseHeader(String[] msg) {
-		String version = msg[1];
-
-		return "1.0".equals(version) && "0xD0xA".equals(msg[5]) && "0xD0xA".equals(msg[6]);
+		return "1.0".equals(msg[1]);
 	}
 
 	/**

@@ -42,13 +42,10 @@ public class MdbHandler implements Runnable {
 		if (!msgQueue.isEmpty()) {
 			byte[] data = msgQueue.poll();
 			String convert = new String(data, 0, data.length);
-			String[] msg = convert.split("\\s", 9);
-			boolean isValid = checkValidMessageType(msg[0]);
+			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 
-			if (isValid) {
+			if (checkValidMessageType(msg[0]) && analyseHeader(msg)) {
 				print(msg);
-
-				analyseHeader(msg);
 
 				byte[] body = analyseBody(data, convert);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
@@ -82,29 +79,27 @@ public class MdbHandler implements Runnable {
 	 */
 	private boolean analyseHeader(String[] msg) {
 		String version = msg[1];
+		int senderId = Integer.parseInt(msg[2]);
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		return "1.0".equals(version) && (replicationDeg <= 9 || replicationDeg >= 0) && "0xD0xA".equals(msg[6])
-				&& "0xD0xA".equals(msg[7]);
+		return "1.0".equals(version) && senderId != PEER_ID && (replicationDeg <= 9 || replicationDeg >= 0);
 	}
 
 	/**
-	 * Analisa o body da mensagem. TODO: Não sei se é útil.
+	 * Analisa o body da mensagem.
 	 * 
+	 * @param data
+	 *            Informação original recebida
 	 * @param msg
-	 * @return
+	 *            Mensagem recebida
+	 * @return byte[] com o body da mensagem
 	 */
 	private byte[] analyseBody(byte[] data, String msg) {
-		int bodyIndex = msg.indexOf("0xD0xA 0xD0xA") + 14;
+		int bodyIndex = msg.indexOf("\r\n") + 4;
 		byte[] destination = new byte[msg.length() - bodyIndex];
 
 		if (bodyIndex != -1) {
 			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
-
-			byte[] destination2 = new byte[bodyIndex];
-			System.arraycopy(data, 0, destination2, 0, bodyIndex);
-			System.out.println(new String(destination2));
-
 			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
 		}
 		return destination;
@@ -145,8 +140,8 @@ public class MdbHandler implements Runnable {
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDB: ");
-		for (int i = 0; i < msg.length - 1; i++)
+		for (int i = 0; i < msg.length - 3; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print("<body>\n");
+		System.out.print("<crlf><crlf><body>\n");
 	}
 }

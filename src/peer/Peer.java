@@ -14,7 +14,9 @@ import handlers.MdbHandler;
 import handlers.MdrHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
+
 import java.io.*;
+
 public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static final long serialVersionUID = 1L;
 
@@ -41,6 +43,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static double VERSION;
 
 	private static ArrayList<FileInformation> fileList;
+
 	protected Peer() throws RemoteException {
 		super();
 	}
@@ -122,7 +125,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		for (Chunk c : mdbHandler.getChunksReceived()) {
 			if (!c.isChecked()) {
 				String cnfrmtn_msg = "STORED" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
-						+ c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA";
+						+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
 				byte[] confirmation = cnfrmtn_msg.getBytes();
 
 				mc.send(confirmation);
@@ -153,8 +156,9 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 				System.out.println("\nSending multicast BACKUP: ");
 				Chunk c = chunkFiles.remove(0);
 				String outMessage = "PUTCHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
-						+ c.getChunkNumber() + " " + c.getReplicationDegree() + " " + "0xD0xA" + " " + "0xD0xA" + " ";
-				System.out.println(outMessage + "<body>");
+						+ c.getChunkNumber() + " " + c.getReplicationDegree();
+				System.out.println(outMessage + " <crlf><crlf><body>");
+				outMessage += " " + "\r\n" + "\r\n";
 
 				byte[] autoBuffer = new byte[0];
 				autoBuffer = joinArrays(outMessage.getBytes(), c.getContent());
@@ -178,7 +182,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		while (!mcHandler.getChunksToSend().isEmpty()) {
 			Chunk c = mcHandler.getChunksToSend().poll();
 			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
-					+ c.getChunkNumber() + " " + "0xD0xA" + " " + "0xD0xA" + " ";
+					+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
 			byte[] confirmation = new byte[0];
 			confirmation = joinArrays(cnfrmtn_msg.getBytes(), c.getContent());
 
@@ -196,9 +200,9 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		int i = 0;
 		do {
 			i++;
-			String outMessage = "GETCHUNK" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + i + " " + "0xD0xA"
-					+ " " + "0xD0xA";
+			String outMessage = "GETCHUNK" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + i;
 			System.out.println(outMessage);
+			outMessage += " " + "\r\n" + "\r\n";
 			byte[] buffer = outMessage.getBytes();
 
 			mc.send(buffer);
@@ -217,24 +221,27 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	}
 
 	private void operationDelete(String filePath) {
-		String delete_msg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + "lorem_ipsum.txt" + " " + "0xD0xA" + " "
-				+ "0xD0xA";
-		byte[] confirmation = delete_msg.getBytes();
-		
-		mc.send(confirmation);
+		String deleteMsg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + "\r\n" + "\r\n";
+		byte[] delete = deleteMsg.getBytes();
+
+		mc.send(delete);
 	}
 
 	private void operationReclaim(String filePath) {
-		System.out.println("Reclaim.");
+		String removedMsg = "REMOVED" + " " + VERSION + " " + PEER_ID + " " + filePath
+				+ " " /* + chunkNo + " " */ + "\r\n" + "\r\n";
+		byte[] remove = removedMsg.getBytes();
+
+		mc.send(remove);
 	}
 
 	public void operationState() {
 		System.out.println("State.");
-		File[] files = new File("C:/Users/Ricardo/Documents/GitHub/SDIS/chunks").listFiles();
+		File[] files = new File("./chunks").listFiles();
 		for (File file : files) {
-		    if (file.isFile()) {
-		        System.out.println(file.getName());
-		    }
+			if (file.isFile()) {
+				System.out.println(file.getName());
+			}
 		}
 
 	}
@@ -285,8 +292,8 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		Registry registry = LocateRegistry.getRegistry();
 		registry.rebind(srvc_accss_pnt, obj);
 
-		
 		System.err.println("RMI Sucessfully Registred");
+
 		fileList = new ArrayList<FileInformation>();
 		mc = new MulticastChannel(MC_IP, MC_PORT);
 		mdb = new MulticastChannel(MDB_IP, MDB_PORT);

@@ -5,3 +5,8 @@
 Primeiro projeto para a cadeira de SDIS
 
 [<b>Distributed Backup Service</b>](https://web.fe.up.pt/~pfs/aulas/sd2017/projs/proj1/proj1.html)
+
+Instruções
+ 1. Executar StartPeerRMI.bat
+ 2. Executar StartPeerRMI2.bat
+ 3. TestApp_*.bat, em que * representa o serviço desejado

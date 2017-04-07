@@ -54,14 +54,12 @@ public class MdrHandler implements Runnable {
 		if (!msgQueue.isEmpty()) {
 			byte[] data = msgQueue.poll();
 			String convert = new String(data, 0, data.length);
-			String[] msg = convert.split("\\s", 8);
+			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 
-			if (checkValidMessageType(msg[0])) {
+			if (checkValidMessageType(msg[0]) && analyseHeader(msg)) {
 				print(msg);
 
-				analyseHeader(msg);
-
-				byte[] body = analyseBody(msg[7]);
+				byte[] body = analyseBody(data, convert);
 				System.out.println("body size: " + body.length);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
@@ -96,20 +94,26 @@ public class MdrHandler implements Runnable {
 	 * @return true se o cabeçalho é válido
 	 */
 	private boolean analyseHeader(String[] msg) {
-		return "1.0".equals(msg[1]) && "0xD0xA".equals(msg[5]) && "0xD0xA".equals(msg[6]);
+		return "1.0".equals(msg[1]) && Integer.parseInt(msg[2]) != PEER_ID;
 	}
 
 	/**
-	 * Analisa o body da mensagem. Converte o body de string para byte[]. TODO:
-	 * Não sei se é útil.
+	 * Analisa o body da mensagem.
 	 * 
+	 * @param data
+	 *            Informação original recebida
 	 * @param msg
-	 *            em string
-	 * @return body como byte[]
+	 *            Mensagem recebida
+	 * @return byte[] com o body da mensagem
 	 */
-	private byte[] analyseBody(String msg) {
-		byte[] destination = null;
-		destination = msg.getBytes();
+	private byte[] analyseBody(byte[] data, String msg) {
+		int bodyIndex = msg.indexOf("\r\n") + 4;
+		byte[] destination = new byte[msg.length() - bodyIndex];
+
+		if (bodyIndex != -1) {
+			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
+			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
+		}
 		return destination;
 	}
 
@@ -194,8 +198,8 @@ public class MdrHandler implements Runnable {
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDR: ");
-		for (int i = 0; i < msg.length - 1; i++)
+		for (int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print("<body>\n");
+		System.out.print("<crlf><crlf><body>\n");
 	}
 }
