@@ -6,9 +6,12 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
-import java.util.TreeSet;
 
 import interfaces.Chunk;
 import peer.Peer;
@@ -17,61 +20,36 @@ public class McHandler implements Runnable {
 	private int PEER_ID;
 	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
 	private String messageType = "";
-	private TreeSet<ChunkInfo> treeofchunks = new TreeSet<ChunkInfo>();
 	private Queue<Chunk> chunksToSend = new LinkedList<Chunk>();
+	private Map<ChunkInfo, ArrayList<Integer>> storedMap = new HashMap<ChunkInfo, ArrayList<Integer>>();
 
 	public McHandler(Queue<byte[]> msgQueue, int id) {
 		this.msgQueue = msgQueue;
 		PEER_ID = id;
 	}
 
-	@Override
-	public void run() {
-		while (!Thread.currentThread().isInterrupted()) {
-			analyseMessages();
-		}
-	}
-
-	public Queue<Chunk> getChunksToSend() {
-		return chunksToSend;
-	}
-
 	/**
-	 * Analisa todas as mensagens armazenadas vindas do MC.
-	 */
-	private void analyseMessages() {
-		if (!msgQueue.isEmpty()) {
-			byte[] data = msgQueue.poll();
-			String convert = new String(data, 0, data.length);
-			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
-
-			if (checkMessageType(msg[0]) && analyseHeader(msg)) {
-				print(msg);
-				if ("STORED".equals(this.messageType)) {
-					ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3], Integer.parseInt(msg[4]));
-
-					checkStoredChunk(chunkinfo);
-				} else if ("DELETE".equals(this.messageType)) {
-					deleteFiles(msg[3]);
-				} else if ("GETCHUNK".equals(this.messageType)) {
-					searchChunk(msg[3], msg[4]);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Verifica se o tipo de mensagem recebida é válida.
+	 * Adiciona a mensagem de STORED à tree de mensagens Stored já recebidas.
+	 * TODO: Modificar isto
 	 * 
-	 * @param messageType
-	 *            Tipo de mensagem
-	 * @return true se é um tipo aceitavel, false caso contrário
+	 * @param ci
+	 *            Mensagem recebida
+	 * @param senderId
+	 *            Peer que enviou a mensagem Stored
 	 */
-	private boolean checkMessageType(String messageType) {
-		if ("STORED".equals(messageType) || "DELETE".equals(messageType) || "GETCHUNK".equals(messageType))
-			this.messageType = messageType;
+	private void addStoredChunk(ChunkInfo ci, int senderId) {
+		ArrayList<Integer> peersComChunk = new ArrayList<Integer>();
 
-		return !this.messageType.isEmpty();
+		if (storedMap.containsKey(ci)) {
+			peersComChunk = storedMap.get(ci);
+			if (!peersComChunk.contains(senderId)) {
+				peersComChunk.add(senderId);
+				storedMap.put(ci, peersComChunk);
+			}
+		} else {
+			peersComChunk.add(senderId);
+			storedMap.put(ci, peersComChunk);
+		}
 	}
 
 	/**
@@ -86,15 +64,43 @@ public class McHandler implements Runnable {
 	}
 
 	/**
-	 * Verifica se já recebeu uma mensagem de STORED igual à recebida. TODO:
-	 * Modificar isto
-	 * 
-	 * @param ci
-	 *            Mensagem recebida
-	 * @return true se já tinha recebido, false se é uma nova mensagem
+	 * Analisa todas as mensagens armazenadas vindas do MC.
 	 */
-	private boolean checkStoredChunk(ChunkInfo ci) {
-		return !treeofchunks.add(ci);
+	private void analyseMessages() {
+		if (!msgQueue.isEmpty()) {
+			byte[] data = msgQueue.poll();
+			String convert = new String(data, 0, data.length);
+			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
+
+			if (checkMessageType(msg[0]) && analyseHeader(msg)) {
+				print(msg);
+				if ("STORED".equals(this.messageType)) {
+					ChunkInfo chunkinfo = new ChunkInfo(msg[3], Integer.parseInt(msg[4]));
+					addStoredChunk(chunkinfo, Integer.parseInt(msg[2]));
+				} else if ("DELETE".equals(this.messageType)) {
+					deleteFiles(msg[3]);
+				} else if ("GETCHUNK".equals(this.messageType)) {
+					searchChunk(msg[3], msg[4]);
+				} else if ("REMOVED".equals(this.messageType)) {
+					doIHave(msg[3], msg[4]);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Verifica se o tipo de mensagem recebida é válida.
+	 * 
+	 * @param messageType
+	 *            Tipo de mensagem
+	 * @return true se é um tipo aceitavel, false caso contrário
+	 */
+	private boolean checkMessageType(String messageType) {
+		if ("STORED".equals(messageType) || "DELETE".equals(messageType) || "GETCHUNK".equals(messageType)
+				|| "REMOVED".equals(messageType))
+			this.messageType = messageType;
+
+		return !this.messageType.isEmpty();
 	}
 
 	/**
@@ -115,10 +121,47 @@ public class McHandler implements Runnable {
 		}
 	}
 
+	private void doIHave(String fileId, String chunkNo) {
+//		int i = Integer.parseInt(chunkNo);
+//		String chunkNoStr = String.format("%03d", i);
+//
+//		if (fileExists("chunks/" + fileId + chunkNoStr)) {
+//			Path path = Paths.get("chunks/" + fileId + chunkNoStr);
+//
+//			try {
+//				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
+//				chunksToSend.add(c);
+//				Peer.sendChunks();
+//			} catch (IOException e) {
+//				System.err.println("Failed to read in mcHandler.doIHave().");
+//			}
+//		}
+	}
+
 	private boolean fileExists(String path) {
 		File f = new File(path);
 
 		return f.exists() && !f.isDirectory();
+	}
+
+	public Queue<Chunk> getChunksToSend() {
+		return chunksToSend;
+	}
+
+	public boolean receivedAllStored(Chunk c) {
+		ChunkInfo ci = new ChunkInfo(c.getFileId(), c.getChunkNumber());
+		List<Integer> li = storedMap.get(ci);
+
+		if (li == null)
+			return false;
+		return c.getReplicationDegree() <= li.size();
+	}
+
+	@Override
+	public void run() {
+		while (!Thread.currentThread().isInterrupted()) {
+			analyseMessages();
+		}
 	}
 
 	/**

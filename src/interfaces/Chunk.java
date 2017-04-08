@@ -9,17 +9,6 @@ public class Chunk implements Comparable<Chunk> {
 	private boolean checked;
 	private boolean endOfFile = false;
 
-	public Chunk(String fileId, int chunkNumber, int replicationDegree, byte[] content) {
-		this.fileId = fileId;
-		this.replicationDegree = replicationDegree;
-		this.chunkNumber = chunkNumber;
-		this.content = content;
-		this.checked = false;
-
-		if (this.content.length < MAX_CHUNK_SIZE)
-			this.endOfFile = true;
-	}
-
 	public Chunk(String fileId, int chunkNumber, byte[] content) {
 		this.fileId = fileId;
 		this.replicationDegree = 0;
@@ -31,34 +20,21 @@ public class Chunk implements Comparable<Chunk> {
 			this.endOfFile = true;
 	}
 
-	/**
-	 * @return the endOfFile
-	 */
-	public boolean isEndOfFile() {
-		return endOfFile;
+	public Chunk(String fileId, int chunkNumber, int replicationDegree, byte[] content) {
+		this.fileId = fileId;
+		this.replicationDegree = replicationDegree;
+		this.chunkNumber = chunkNumber;
+		this.content = content;
+		this.checked = false;
+
+		if (this.content.length < MAX_CHUNK_SIZE)
+			this.endOfFile = true;
 	}
 
-	/**
-	 * @return the check
-	 */
-	public boolean isChecked() {
-		return checked;
-	}
-
-	/**
-	 * @param check
-	 *            the check to set
-	 */
-	public void setChecked(boolean checked) {
-		this.checked = checked;
-	}
-
-	public String getFileId() {
-		return fileId;
-	}
-
-	public int getReplicationDegree() {
-		return replicationDegree;
+	@Override
+	public int compareTo(Chunk chunk2) {
+		return fileId.equals(chunk2.fileId) && chunkNumber == chunk2.chunkNumber ? 0
+				: (chunkNumber - chunk2.getChunkNumber());
 	}
 
 	public int getChunkNumber() {
@@ -69,9 +45,33 @@ public class Chunk implements Comparable<Chunk> {
 		return content;
 	}
 
-	@Override
-	public int compareTo(Chunk chunk2) {
-		return fileId.equals(chunk2.fileId) && chunkNumber == chunk2.chunkNumber ? 0
-				: (chunkNumber - chunk2.getChunkNumber());
+	public String getFileId() {
+		return fileId;
+	}
+
+	public int getReplicationDegree() {
+		return replicationDegree;
+	}
+
+	/**
+	 * @return the check
+	 */
+	public boolean isChecked() {
+		return checked;
+	}
+
+	/**
+	 * @return the endOfFile
+	 */
+	public boolean isEndOfFile() {
+		return endOfFile;
+	}
+
+	/**
+	 * @param check
+	 *            the check to set
+	 */
+	public void setChecked(boolean checked) {
+		this.checked = checked;
 	}
 }

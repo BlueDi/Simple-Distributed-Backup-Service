@@ -30,10 +30,38 @@ public class MdbHandler implements Runnable {
 	}
 
 	/**
-	 * @return the chunksReceived
+	 * Analisa o body da mensagem.
+	 * 
+	 * @param data
+	 *            Informação original recebida
+	 * @param msg
+	 *            Mensagem recebida
+	 * @return byte[] com o body da mensagem
 	 */
-	public Queue<Chunk> getChunksReceived() {
-		return chunksReceived;
+	private byte[] analyseBody(byte[] data, String msg) {
+		int bodyIndex = msg.indexOf("\r\n") + 4;
+		byte[] destination = new byte[msg.length() - bodyIndex];
+
+		if (bodyIndex != -1) {
+			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
+			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
+		}
+		return destination;
+	}
+
+	/**
+	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * 
+	 * @param msg
+	 *            Mensagem recebida
+	 * @return true se o cabeçalho é válido
+	 */
+	private boolean analyseHeader(String[] msg) {
+		String version = msg[1];
+		int senderId = Integer.parseInt(msg[2]);
+		int replicationDeg = Integer.parseInt(msg[5]);
+
+		return "1.0".equals(version) && PEER_ID != senderId && (replicationDeg <= 9 || replicationDeg >= 0);
 	}
 
 	/**
@@ -72,38 +100,10 @@ public class MdbHandler implements Runnable {
 	}
 
 	/**
-	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
-	 * 
-	 * @param msg
-	 *            Mensagem recebida
-	 * @return true se o cabeçalho é válido
+	 * @return the chunksReceived
 	 */
-	private boolean analyseHeader(String[] msg) {
-		String version = msg[1];
-		int senderId = Integer.parseInt(msg[2]);
-		int replicationDeg = Integer.parseInt(msg[5]);
-
-		return "1.0".equals(version) && PEER_ID != senderId && (replicationDeg <= 9 || replicationDeg >= 0);
-	}
-
-	/**
-	 * Analisa o body da mensagem.
-	 * 
-	 * @param data
-	 *            Informação original recebida
-	 * @param msg
-	 *            Mensagem recebida
-	 * @return byte[] com o body da mensagem
-	 */
-	private byte[] analyseBody(byte[] data, String msg) {
-		int bodyIndex = msg.indexOf("\r\n") + 4;
-		byte[] destination = new byte[msg.length() - bodyIndex];
-
-		if (bodyIndex != -1) {
-			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
-			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
-		}
-		return destination;
+	public Queue<Chunk> getChunksReceived() {
+		return chunksReceived;
 	}
 
 	/**
@@ -143,6 +143,6 @@ public class MdbHandler implements Runnable {
 		System.out.println("\nReceived on MDB: ");
 		for (int i = 0; i < msg.length - 3; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print(" <CRLF><CRLF><body>\n");
+		System.out.print("<CRLF><CRLF><body>;\n");
 	}
 }

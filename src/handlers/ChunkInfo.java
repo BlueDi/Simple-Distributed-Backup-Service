@@ -1,24 +1,27 @@
 package handlers;
 
-class ChunkInfo implements Comparable<ChunkInfo> {
+public class ChunkInfo {
 	public String fileId;
-	public String senderId;
 	public int chunkNo;
 
-	ChunkInfo(String senderId, String fileId) {
-		this.senderId = senderId;
-		this.fileId = fileId;
-		this.chunkNo = 0;
-	}
-
-	ChunkInfo(String senderId, String fileId, int chunkNo) {
-		this.senderId = senderId;
+	public ChunkInfo(String fileId, int chunkNo) {
 		this.fileId = fileId;
 		this.chunkNo = chunkNo;
 	}
 
 	@Override
-	public int compareTo(ChunkInfo ci) {
-		return fileId.equals(ci.fileId) || senderId.equals(ci.senderId) || (chunkNo == ci.chunkNo) ? 0 : -1;
+	public boolean equals(Object obj) {
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		return obj.hashCode() == hashCode();
+	}
+
+	@Override
+	public int hashCode() {
+		return fileId.hashCode() + chunkNo;
 	}
 }

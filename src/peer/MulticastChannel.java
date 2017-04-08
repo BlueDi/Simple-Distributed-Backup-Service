@@ -27,6 +27,16 @@ public class MulticastChannel {
 	}
 
 	/**
+	 * Fecha o socket.
+	 * 
+	 * @throws IOException
+	 */
+	public void close() throws IOException {
+		socket.leaveGroup(group);
+		socket.close();
+	}
+
+	/**
 	 * Liga o socket ao grupo.
 	 * 
 	 * @throws IOException
@@ -36,23 +46,6 @@ public class MulticastChannel {
 		// socket.setTimeToLive(1);
 		socket.joinGroup(group);
 		// socket.setLoopbackMode(true);
-	}
-
-	/**
-	 * Envia um DatagramPacket com a informação de toSend para a rede multicast.
-	 * 
-	 * @param toSend
-	 *            Dados a ser enviados sob a forma de byte[]
-	 * @throws IOException
-	 */
-	public void send(byte[] toSend) {
-		DatagramPacket packet = new DatagramPacket(toSend, toSend.length, group, PORT);
-		try {
-			socket.send(packet);
-		} catch (IOException e) {
-			System.out.println("Falhou no envio do packet.");
-			e.printStackTrace();
-		}
 	}
 
 	/**
@@ -71,12 +64,19 @@ public class MulticastChannel {
 	}
 
 	/**
-	 * Fecha o socket.
+	 * Envia um DatagramPacket com a informação de toSend para a rede multicast.
 	 * 
+	 * @param toSend
+	 *            Dados a ser enviados sob a forma de byte[]
 	 * @throws IOException
 	 */
-	public void close() throws IOException {
-		socket.leaveGroup(group);
-		socket.close();
+	public void send(byte[] toSend) {
+		DatagramPacket packet = new DatagramPacket(toSend, toSend.length, group, PORT);
+		try {
+			socket.send(packet);
+		} catch (IOException e) {
+			System.out.println("Falhou no envio do packet.");
+			e.printStackTrace();
+		}
 	}
 }

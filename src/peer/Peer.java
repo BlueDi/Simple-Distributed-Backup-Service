@@ -1,6 +1,6 @@
 package peer;
 
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.rmi.RemoteException;
@@ -9,14 +9,13 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 import handlers.McHandler;
 import handlers.MdbHandler;
 import handlers.MdrHandler;
 import interfaces.Backup;
 import interfaces.Chunk;
-
-import java.io.*;
 
 public class Peer extends UnicastRemoteObject implements PeerInterface {
 	private static final long serialVersionUID = 1L;
@@ -50,15 +49,20 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	}
 
 	/**
-	 * Liga o programa aos canais multicast.
-	 * 
-	 * @throws IOException
-	 *             Falha na ligação aos canais multicast
+	 * Inicia os Threads dos Handlers.
 	 */
-	private static void joinChannels() throws IOException {
-		mc.join();
-		mdb.join();
-		mdr.join();
+	private static void initializeHandlers() {
+		mcHandler = new McHandler(mcListener.getQueue(), PEER_ID);
+		mdbHandler = new MdbHandler(mdbListener.getQueue(), PEER_ID);
+		mdrHandler = new MdrHandler(mdrListener.getQueue(), PEER_ID);
+
+		mcHandler_Thread = new Thread(mcHandler);
+		mdbHandler_Thread = new Thread(mdbHandler);
+		mdrHandler_Thread = new Thread(mdrHandler);
+
+		mcHandler_Thread.start();
+		mdbHandler_Thread.start();
+		mdrHandler_Thread.start();
 	}
 
 	/**
@@ -79,20 +83,61 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	}
 
 	/**
-	 * Inicia os Threads dos Handlers.
+	 * Junta dois byte arrays.
+	 * 
+	 * @param first
+	 *            array para colocar no inicio do novo array
+	 * @param second
+	 *            array para colocar no fim do novo array
+	 * @return Array = first + second
 	 */
-	private static void initializeHandlers() {
-		mcHandler = new McHandler(mcListener.getQueue(), PEER_ID);
-		mdbHandler = new MdbHandler(mdbListener.getQueue(), PEER_ID);
-		mdrHandler = new MdrHandler(mdrListener.getQueue(), PEER_ID);
+	private static byte[] joinArrays(byte[] first, byte[] second) {
+		return ByteBuffer.wrap(new byte[first.length + second.length]).put(first).put(second).array();
+	}
 
-		mcHandler_Thread = new Thread(mcHandler);
-		mdbHandler_Thread = new Thread(mdbHandler);
-		mdrHandler_Thread = new Thread(mdrHandler);
+	/**
+	 * Liga o programa aos canais multicast.
+	 * 
+	 * @throws IOException
+	 *             Falha na ligação aos canais multicast
+	 */
+	private static void joinChannels() throws IOException {
+		mc.join();
+		mdb.join();
+		mdr.join();
+	}
 
-		mcHandler_Thread.start();
-		mdbHandler_Thread.start();
-		mdrHandler_Thread.start();
+	/**
+	 * O formato da mensagem para enviar um chunk é:: CHUNK Version SenderId
+	 * FileId ChunkNo CRLF;CRLF;Body
+	 */
+	public static void sendChunks() {
+		while (!mcHandler.getChunksToSend().isEmpty()) {
+			Chunk c = mcHandler.getChunksToSend().poll();
+			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
+					+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
+			byte[] confirmation = new byte[0];
+			confirmation = joinArrays(cnfrmtn_msg.getBytes(), c.getContent());
+
+			mdr.send(confirmation);
+		}
+	}
+
+	/**
+	 * O formato da mensagem de Stored é: STORED Version SenderId FileId ChunkNo
+	 * CRLF;CRLF
+	 */
+	public static void sendStored() {
+		for (Chunk c : mdbHandler.getChunksReceived()) {
+			if (!c.isChecked()) {
+				String cnfrmtn_msg = "STORED" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
+						+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
+				byte[] confirmation = cnfrmtn_msg.getBytes();
+
+				mc.send(confirmation);
+				c.setChecked(true);
+			}
+		}
 	}
 
 	/**
@@ -102,7 +147,8 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	public void handleOperation(String operation, String filePath, String replicationDegree) throws RemoteException {
 		switch (operation) {
 		case "BACKUP":
-			operationBackup(filePath, replicationDegree);
+			int rD = Integer.parseInt(replicationDegree);
+			operationBackup(filePath, rD);
 			break;
 		case "RESTORE":
 			operationRestore(filePath + ".");
@@ -123,48 +169,18 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	}
 
 	/**
-	 * Junta dois byte arrays.
-	 * 
-	 * @param first
-	 *            array para colocar no inicio do novo array
-	 * @param second
-	 *            array para colocar no fim do novo array
-	 * @return Array = first + second
-	 */
-	private static byte[] joinArrays(byte[] first, byte[] second) {
-		return ByteBuffer.wrap(new byte[first.length + second.length]).put(first).put(second).array();
-	}
-
-	/**
-	 * The format of the message is: STORED Version SenderId FileId ChunkNo
-	 * CRLF;CRLF
-	 */
-	public static void sendStored() {
-		for (Chunk c : mdbHandler.getChunksReceived()) {
-			if (!c.isChecked()) {
-				String cnfrmtn_msg = "STORED" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
-						+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
-				byte[] confirmation = cnfrmtn_msg.getBytes();
-
-				mc.send(confirmation);
-				c.setChecked(true);
-			}
-		}
-	}
-
-	/**
-	 * Operação Backup. Envia os pedidos de PUTCHUNK pelo MDB Channel. The
-	 * format of the message is: GETCHUNK Version SenderId FileId ChunkNo
+	 * Operação Backup. Envia os pedidos de PUTCHUNK pelo MDB Channel. O formato
+	 * da mensagem de Backup é:: GETCHUNK Version SenderId FileId ChunkNo
 	 * CRLF;CRLF
 	 * 
 	 * @param filePath
 	 *            Ficheiro a guardar
-	 * @param replicationDegree
+	 * @param rD
 	 *            Nível de replicação
 	 */
-	private void operationBackup(String filePath, String replicationDegree) {
+	private void operationBackup(String filePath, int rD) {
 		try {
-			Backup bckp = new Backup(filePath, replicationDegree);
+			Backup bckp = new Backup(filePath, rD);
 			ArrayList<Chunk> chunkFiles = bckp.getChunkFiles();
 
 			while (!chunkFiles.isEmpty()) {
@@ -172,41 +188,78 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 				Chunk c = chunkFiles.remove(0);
 				String outMessage = "PUTCHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
 						+ c.getChunkNumber() + " " + c.getReplicationDegree();
-				System.out.println(outMessage + " <crlf><crlf><body>");
+				System.out.println(outMessage + " <CRLF><CRLF><body>");
 				outMessage += " " + "\r\n" + "\r\n";
 
 				byte[] autoBuffer = new byte[0];
 				autoBuffer = joinArrays(outMessage.getBytes(), c.getContent());
 
-				mdb.send(autoBuffer);
+				int i = 0;
+				AtomicLong sleepTime = new AtomicLong(1000);
+				do {
+					i++;
+					mdb.send(autoBuffer);
+					new Thread(() -> {
+						System.out.println("A esperar");
+						try {
+							Thread.sleep(sleepTime.get());
+							sleepTime.updateAndGet(n -> n * 2);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}) {
+						{
+							start();
+						}
+					}.join();
+				} while (i <= 5 && !mcHandler.receivedAllStored(c));
+
+				if (i > 5) {
+					System.err.println("Did not receive enough STORED messages");
+					break;
+				}
 			}
 		} catch (NumberFormatException e) {
-			System.out.println("Error in Peer.operationBackup(). replicationDegree isnt a number.");
-		} catch (FileNotFoundException e) {
-			System.out.println("Error in Peer.operationBackup(). filePath didnt match a valid file.");
+			System.err.println("Error in Peer.operationBackup(). replicationDegree is not a number.");
+		} catch (InterruptedException e) {
+			System.err.println("Error in Peer.operationBackup(). Failed to sleep.");
 		}
 	}
 
 	/**
-	 * The format of the message is: CHUNK Version SenderId FileId ChunkNo
-	 * CRLF;CRLF;Body
+	 * Operação Delete. Envia os pedidos de DELETE pelo MC Channel. O formato da
+	 * mensagem de Delete é: DELETE Version SenderId FileId CRLF;CRLF
+	 * 
+	 * @param filePath
+	 *            Ficheiro a apagar
 	 */
-	public static void sendChunks() {
-		while (!mcHandler.getChunksToSend().isEmpty()) {
-			Chunk c = mcHandler.getChunksToSend().poll();
-			String cnfrmtn_msg = "CHUNK" + " " + VERSION + " " + PEER_ID + " " + c.getFileId() + " "
-					+ c.getChunkNumber() + " " + "\r\n" + "\r\n";
-			byte[] confirmation = new byte[0];
-			confirmation = joinArrays(cnfrmtn_msg.getBytes(), c.getContent());
+	private void operationDelete(String filePath) {
+		String deleteMsg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + "\r\n" + "\r\n";
+		byte[] delete = deleteMsg.getBytes();
 
-			mdr.send(confirmation);
-		}
+		mc.send(delete);
 	}
 
 	/**
-	 * Operação Restore. Envia os pedidos de GETCHUNK pelo MC Channel. The
-	 * format of the message is: GETCHUNK Version SenderId FileId ChunkNo
+	 * Operação Reclaim. Envia os pedidos de REMOVED pelo MC Channel. O formato
+	 * da mensagem de Reclaim é: REMOVED Version SenderId FileId ChunkNo
 	 * CRLF;CRLF
+	 * 
+	 * @param filePath
+	 *            Ficheiro a remover
+	 */
+	private void operationReclaim(String filePath) {
+		String removedMsg = "REMOVED" + " " + VERSION + " " + PEER_ID + " " + filePath
+				+ " " /* + chunkNo + " " */ + "\r\n" + "\r\n";
+		byte[] remove = removedMsg.getBytes();
+
+		mc.send(remove);
+	}
+
+	/**
+	 * Operação Restore. Envia os pedidos de GETCHUNK pelo MC Channel. O formato
+	 * da mensagem para pedir um chunk é: GETCHUNK Version SenderId FileId
+	 * ChunkNo CRLF;CRLF
 	 * 
 	 * @param filePath
 	 *            Ficheiro a recriar
@@ -229,28 +282,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 						"Error when tried to wait a random delay to send the confirmation message on the MC channel.");
 			}
 		} while (!mdrHandler.isEndOfFile());
-	}
-
-	/**
-	 * Operação Delete. Envia os pedidos de DELETE pelo MC Channel. The format
-	 * of the message is: DELETE Version SenderId FileId CRLF;CRLF
-	 * 
-	 * @param filePath
-	 *            Ficheiro a apagar
-	 */
-	private void operationDelete(String filePath) {
-		String deleteMsg = "DELETE" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + "\r\n" + "\r\n";
-		byte[] delete = deleteMsg.getBytes();
-
-		mc.send(delete);
-	}
-
-	private void operationReclaim(String filePath) {
-		String removedMsg = "REMOVED" + " " + VERSION + " " + PEER_ID + " " + filePath
-				+ " " /* + chunkNo + " " */ + "\r\n" + "\r\n";
-		byte[] remove = removedMsg.getBytes();
-
-		mc.send(remove);
 	}
 
 	public void operationState() {

@@ -22,6 +22,15 @@ public class MulticastListener implements Runnable {
 	}
 
 	/**
+	 * Devolve todas as mensagens recebidas pelo socket.
+	 * 
+	 * @return Fila com todas as mensagens recebidas pela socket
+	 */
+	public Queue<byte[]> getQueue() {
+		return this.receivedMsgs;
+	}
+
+	/**
 	 * Inicia o thread para tratar o evento.
 	 */
 	public void run() {
@@ -36,14 +45,5 @@ public class MulticastListener implements Runnable {
 				break;
 			}
 		}
-	}
-
-	/**
-	 * Devolve todas as mensagens recebidas pelo socket.
-	 * 
-	 * @return Fila com todas as mensagens recebidas pela socket
-	 */
-	public Queue<byte[]> getQueue() {
-		return this.receivedMsgs;
 	}
 }

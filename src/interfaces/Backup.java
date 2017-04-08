@@ -15,15 +15,6 @@ public class Backup {
 	private int READ_LENGTH = 64000;
 
 	/**
-	 * Retorna um array com os chunks que são necessários enviar.
-	 * 
-	 * @return Array de chunks por enviar
-	 */
-	public ArrayList<Chunk> getChunkFiles() {
-		return chunkFiles;
-	}
-
-	/**
 	 * Construtor do Backup.
 	 * 
 	 * @param filepath
@@ -34,7 +25,7 @@ public class Backup {
 	 * @throws FileNotFoundException
 	 *             Quando não econtra o ficheiro pretendido
 	 */
-	public Backup(String filepath, int replicationLevel) throws FileNotFoundException {
+	public Backup(String filepath, int replicationLevel) {
 		this.filepath = filepath;
 		this.replicationLevel = replicationLevel;
 
@@ -44,17 +35,16 @@ public class Backup {
 	}
 
 	/**
-	 * Construtor alternativo do Backup.
+	 * Retorna um array com os chunks que são necessários enviar.
 	 * 
-	 * @param filepath
-	 *            Path para o ficheiro que se quer enviar
-	 * @param replicationLevel
-	 *            Nível de replicação. Quantos peers devem armazenar chunks
-	 *            deste ficheiro. String que representa um int
-	 * @throws FileNotFoundException
+	 * @return Array de chunks por enviar
 	 */
-	public Backup(String filepath, String replicationLevel) throws FileNotFoundException {
-		this(filepath, Integer.parseInt(replicationLevel));
+	public ArrayList<Chunk> getChunkFiles() {
+		return chunkFiles;
+	}
+
+	private void sendingData() {
+		System.out.println("Número de chunks: " + chunkFiles.size());
 	}
 
 	/**
@@ -85,9 +75,5 @@ public class Backup {
 		} catch (IOException e) {
 			System.err.println("Error when tried to read from the file. Backup.splitFile()");
 		}
-	}
-
-	private void sendingData() {
-		System.out.println("Número de chunks: " + chunkFiles.size());
 	}
 }

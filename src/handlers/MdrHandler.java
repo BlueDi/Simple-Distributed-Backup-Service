@@ -14,8 +14,40 @@ import java.util.Stack;
 import interfaces.Chunk;
 
 public class MdrHandler implements Runnable {
+	public static List<File> listOfFilesToMerge(File oneOfFiles) {
+		String tmpName = oneOfFiles.getName();// {name}.{number}
+		String destFileName = tmpName.substring(0, tmpName.lastIndexOf('.'));// remove
+																				// .{number}
+		File[] files = oneOfFiles.getParentFile()
+				.listFiles((File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
+		Arrays.sort(files);// ensuring order 001, 002, ..., 010, ...
+		return Arrays.asList(files);
+	}
+
+	public static List<File> listOfFilesToMerge(String oneOfFiles) {
+		return listOfFilesToMerge(new File(oneOfFiles));
+	}
+
+	public static void mergeFiles(File oneOfFiles, File into) throws IOException {
+		mergeFiles(listOfFilesToMerge(oneOfFiles), into);
+	}
+
+	public static void mergeFiles(List<File> files, File into) throws IOException {
+		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
+			for (File f : files) {
+				Files.copy(f.toPath(), mergingStream);
+			}
+		}
+	}
+
+	public static void mergeFiles(String oneOfFiles, String into) throws IOException {
+		mergeFiles(new File(oneOfFiles), new File(into));
+	}
+
 	private int PEER_ID;
+
 	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
+
 	private Stack<Chunk> chunksRequests = new Stack<Chunk>();
 
 	public MdrHandler(Queue<byte[]> msgQueue, int id) {
@@ -23,28 +55,51 @@ public class MdrHandler implements Runnable {
 		PEER_ID = id;
 	}
 
-	@Override
-	public void run() {
-		while (!Thread.currentThread().isInterrupted()) {
-			analyseMessages();
+	/**
+	 * Analisa o body da mensagem.
+	 * 
+	 * @param data
+	 *            Informação original recebida
+	 * @param msg
+	 *            Mensagem recebida
+	 * @return byte[] com o body da mensagem
+	 */
+	private byte[] analyseBody(byte[] data, String msg) {
+		int bodyIndex = msg.indexOf("\r\n") + 4;
+		byte[] destination = new byte[msg.length() - bodyIndex];
+
+		if (bodyIndex != -1) {
+			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
+			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
 		}
+		return destination;
 	}
 
 	/**
-	 * @return the chunksReceived
+	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * 
+	 * @param msg
+	 *            Mensagem recebida
+	 * @return true se o cabeçalho é válido
 	 */
-	public Stack<Chunk> getRequests() {
-		return chunksRequests;
+	private boolean analyseHeader(String[] msg) {
+		return "1.0".equals(msg[1]) && PEER_ID != Integer.parseInt(msg[2]);
 	}
 
-	/**
-	 * @return the endOfFile
-	 */
-	public boolean isEndOfFile() {
-		if (chunksRequests.isEmpty())
-			return false;
-		return chunksRequests.peek().isEndOfFile();
-	}
+	// /**
+	// * Junta dois byte arrays.
+	// * @param first array para colocar no inicio do novo array
+	// * @param second array para colocar no fim do novo array
+	// * @return Array = first + second
+	// */
+	// private byte[] joinArrays(byte[] first, byte[] second){
+	// byte[] destination = new byte[first.length + second.length];
+	//
+	// System.arraycopy(first, 0, destination, 0, first.length);
+	// System.arraycopy(second, 0, destination, first.length, second.length);
+	//
+	// return destination;
+	// }
 
 	/**
 	 * Analisa todas as mensagens armazenadas e cria o ficheiro se recebeu o
@@ -85,52 +140,6 @@ public class MdrHandler implements Runnable {
 		return "CHUNK".equals(messageType);
 	}
 
-	/**
-	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
-	 * 
-	 * @param msg
-	 *            Mensagem recebida
-	 * @return true se o cabeçalho é válido
-	 */
-	private boolean analyseHeader(String[] msg) {
-		return "1.0".equals(msg[1]) && PEER_ID != Integer.parseInt(msg[2]);
-	}
-
-	/**
-	 * Analisa o body da mensagem.
-	 * 
-	 * @param data
-	 *            Informação original recebida
-	 * @param msg
-	 *            Mensagem recebida
-	 * @return byte[] com o body da mensagem
-	 */
-	private byte[] analyseBody(byte[] data, String msg) {
-		int bodyIndex = msg.indexOf("\r\n") + 4;
-		byte[] destination = new byte[msg.length() - bodyIndex];
-
-		if (bodyIndex != -1) {
-			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
-			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
-		}
-		return destination;
-	}
-
-	// /**
-	// * Junta dois byte arrays.
-	// * @param first array para colocar no inicio do novo array
-	// * @param second array para colocar no fim do novo array
-	// * @return Array = first + second
-	// */
-	// private byte[] joinArrays(byte[] first, byte[] second){
-	// byte[] destination = new byte[first.length + second.length];
-	//
-	// System.arraycopy(first, 0, destination, 0, first.length);
-	// System.arraycopy(second, 0, destination, first.length, second.length);
-	//
-	// return destination;
-	// }
-
 	private void createFile(String fileId) {
 		// byte[] data = new byte[0];
 		// Path path = Paths.get(("./files/" + fileId));
@@ -159,34 +168,20 @@ public class MdrHandler implements Runnable {
 		}
 	}
 
-	public static void mergeFiles(List<File> files, File into) throws IOException {
-		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
-			for (File f : files) {
-				Files.copy(f.toPath(), mergingStream);
-			}
-		}
+	/**
+	 * @return the chunksReceived
+	 */
+	public Stack<Chunk> getRequests() {
+		return chunksRequests;
 	}
 
-	public static List<File> listOfFilesToMerge(File oneOfFiles) {
-		String tmpName = oneOfFiles.getName();// {name}.{number}
-		String destFileName = tmpName.substring(0, tmpName.lastIndexOf('.'));// remove
-																				// .{number}
-		File[] files = oneOfFiles.getParentFile()
-				.listFiles((File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
-		Arrays.sort(files);// ensuring order 001, 002, ..., 010, ...
-		return Arrays.asList(files);
-	}
-
-	public static void mergeFiles(File oneOfFiles, File into) throws IOException {
-		mergeFiles(listOfFilesToMerge(oneOfFiles), into);
-	}
-
-	public static List<File> listOfFilesToMerge(String oneOfFiles) {
-		return listOfFilesToMerge(new File(oneOfFiles));
-	}
-
-	public static void mergeFiles(String oneOfFiles, String into) throws IOException {
-		mergeFiles(new File(oneOfFiles), new File(into));
+	/**
+	 * @return the endOfFile
+	 */
+	public boolean isEndOfFile() {
+		if (chunksRequests.isEmpty())
+			return false;
+		return chunksRequests.peek().isEndOfFile();
 	}
 
 	/**
@@ -200,5 +195,12 @@ public class MdrHandler implements Runnable {
 		for (int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
 		System.out.print(" <CRLF><CRLF><body>\n");
+	}
+
+	@Override
+	public void run() {
+		while (!Thread.currentThread().isInterrupted()) {
+			analyseMessages();
+		}
 	}
 }
