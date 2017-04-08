@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import interfaces.Chunk;
+import peer.Peer;
 
 public class MdbHandler implements Runnable {
 	private int PEER_ID;
@@ -53,7 +54,7 @@ public class MdbHandler implements Runnable {
 				storeChunk(chunk);
 				chunksReceived.add(chunk);
 
-				// sendConfirmationOfStoredChunk();
+				Peer.sendStored();
 			}
 		}
 	}
@@ -82,7 +83,7 @@ public class MdbHandler implements Runnable {
 		int senderId = Integer.parseInt(msg[2]);
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		return "1.0".equals(version) && senderId != PEER_ID && (replicationDeg <= 9 || replicationDeg >= 0);
+		return "1.0".equals(version) && PEER_ID != senderId && (replicationDeg <= 9 || replicationDeg >= 0);
 	}
 
 	/**
@@ -142,6 +143,6 @@ public class MdbHandler implements Runnable {
 		System.out.println("\nReceived on MDB: ");
 		for (int i = 0; i < msg.length - 3; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print("<crlf><crlf><body>\n");
+		System.out.print(" <CRLF><CRLF><body>\n");
 	}
 }

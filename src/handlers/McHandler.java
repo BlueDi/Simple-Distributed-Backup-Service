@@ -11,6 +11,7 @@ import java.util.Queue;
 import java.util.TreeSet;
 
 import interfaces.Chunk;
+import peer.Peer;
 
 public class McHandler implements Runnable {
 	private int PEER_ID;
@@ -44,17 +45,17 @@ public class McHandler implements Runnable {
 			String convert = new String(data, 0, data.length);
 			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 
-			print(msg);
+			if (checkMessageType(msg[0]) && analyseHeader(msg)) {
+				print(msg);
+				if ("STORED".equals(this.messageType)) {
+					ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3], Integer.parseInt(msg[4]));
 
-			if (checkMessageType(msg[0]) && "STORED".equals(this.messageType)) {
-				ChunkInfo chunkinfo = new ChunkInfo(msg[2], msg[3], Integer.parseInt(msg[4]));
-
-				analyseHeader(msg);
-				checkStoredChunk(chunkinfo);
-			} else if (checkMessageType(msg[0]) && "DELETE".equals(this.messageType)) {
-				deleteFiles(msg[3]);
-			} else if (checkMessageType(msg[0]) && "GETCHUNK".equals(this.messageType)) {
-				searchChunk(msg[3], msg[4]);
+					checkStoredChunk(chunkinfo);
+				} else if ("DELETE".equals(this.messageType)) {
+					deleteFiles(msg[3]);
+				} else if ("GETCHUNK".equals(this.messageType)) {
+					searchChunk(msg[3], msg[4]);
+				}
 			}
 		}
 	}
@@ -81,7 +82,7 @@ public class McHandler implements Runnable {
 	 * @return true se o cabeçalho é válido
 	 */
 	private boolean analyseHeader(String[] msg) {
-		return "1.0".equals(msg[1]);
+		return "1.0".equals(msg[1]) && PEER_ID != Integer.parseInt(msg[2]);
 	}
 
 	/**
@@ -110,7 +111,7 @@ public class McHandler implements Runnable {
 				Files.delete(file);
 			}
 		} catch (IOException e) {
-			System.out.println("Failed to delete chunks on MCHandler.");
+			System.err.println("Failed to delete chunks on MCHandler.");
 		}
 	}
 
@@ -120,6 +121,15 @@ public class McHandler implements Runnable {
 		return f.exists() && !f.isDirectory();
 	}
 
+	/**
+	 * Procura o chunk do ficheiro fileId com o número chunkNo na pasta dos
+	 * chunks. Se encontrar adiciona ao chunksToSend para depois ser enviado.
+	 * 
+	 * @param fileId
+	 *            Ficheiro procurado
+	 * @param chunkNo
+	 *            Número do chunk procurado
+	 */
 	private void searchChunk(String fileId, String chunkNo) {
 		int i = Integer.parseInt(chunkNo);
 		String chunkNoStr = String.format("%03d", i);
@@ -130,8 +140,9 @@ public class McHandler implements Runnable {
 			try {
 				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
 				chunksToSend.add(c);
+				Peer.sendChunks();
 			} catch (IOException e) {
-				System.out.println("Failed to read in mcHandler.searchChunk().");
+				System.err.println("Failed to read in mcHandler.searchChunk().");
 			}
 		}
 	}

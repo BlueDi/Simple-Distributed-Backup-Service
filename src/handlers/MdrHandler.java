@@ -60,7 +60,6 @@ public class MdrHandler implements Runnable {
 				print(msg);
 
 				byte[] body = analyseBody(data, convert);
-				System.out.println("body size: " + body.length);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
 				chunksRequests.push(chunk);
@@ -94,7 +93,7 @@ public class MdrHandler implements Runnable {
 	 * @return true se o cabeçalho é válido
 	 */
 	private boolean analyseHeader(String[] msg) {
-		return "1.0".equals(msg[1]) && Integer.parseInt(msg[2]) != PEER_ID;
+		return "1.0".equals(msg[1]) && PEER_ID != Integer.parseInt(msg[2]);
 	}
 
 	/**
@@ -200,6 +199,6 @@ public class MdrHandler implements Runnable {
 		System.out.println("\nReceived on MDR: ");
 		for (int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print("<crlf><crlf><body>\n");
+		System.out.print(" <CRLF><CRLF><body>\n");
 	}
 }

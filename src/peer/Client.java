@@ -41,20 +41,20 @@ public class Client {
 			PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
 			stub.handleOperation(operation, operand_1, operand_2);
 		} catch (RemoteException e) {
-			System.out.println(
+			System.err.println(
 					"Error in Client.callOperation(). Reference could not be created or communication with the registry failed.");
 		} catch (NotBoundException e) {
-			System.out.println(
+			System.err.println(
 					"Error in Client.callOperation(). Registry tried to lookup but the name is not currently bounded.");
 		}
 	}
 
 	public static void main(String[] args) {
-		if (args.length < 1) {
-			System.out.println("Usage: java TestApp <peer_ap> <operation>");
-			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1>");
-			System.out.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");
-			return;
+		if (args.length < 3) {
+			System.err.println("Usage: java TestApp <peer_ap> <operation>");
+			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1>");
+			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");
+			System.exit(1);
 		}
 
 		if (processInput(args))
