@@ -62,10 +62,9 @@ public class Client {
 			System.err.println("Usage: java TestApp <peer_ap> <operation>");
 			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1>");
 			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");
-			System.exit(1);
-		}
-
-		if (processInput(args))
+		} 
+		
+		else if (processInput(args))
 			callOperation();
 	}
 

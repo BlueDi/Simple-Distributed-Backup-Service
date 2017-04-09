@@ -309,49 +309,49 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			System.err.println("Usage: <protocol_version> <server_id> <service_access_point>");
 			System.err.println(
 					"Or: <protocol_version> <server_id> <service_access_point> <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
-			System.exit(1);
 		}
+		else{
+			VERSION = Double.parseDouble(args[0]);
+			PEER_ID = Integer.parseInt(args[1]);
+			String srvc_accss_pnt = args[2];
+			System.out.println("Peer: " + srvc_accss_pnt + " started.");
 
-		VERSION = Double.parseDouble(args[0]);
-		PEER_ID = Integer.parseInt(args[1]);
-		String srvc_accss_pnt = args[2];
-		System.out.println("Peer: " + srvc_accss_pnt + " started.");
+			// Iniciar ip e portas default
+			String MC_IP = "224.0.0.2";
+			int MC_PORT = 4002;
+			String MDB_IP = "224.0.0.3";
+			int MDB_PORT = 4003;
+			String MDR_IP = "224.0.0.4";
+			int MDR_PORT = 4004;
 
-		// Iniciar ip e portas default
-		String MC_IP = "224.0.0.2";
-		int MC_PORT = 4002;
-		String MDB_IP = "224.0.0.3";
-		int MDB_PORT = 4003;
-		String MDR_IP = "224.0.0.4";
-		int MDR_PORT = 4004;
+			if (args.length > 3) {
+				// se receber mais que 3 tem que alterar ip e portas
+				MC_IP = args[3];
+				MC_PORT = Integer.parseInt(args[4]);
+				MDB_IP = args[5];
+				MDB_PORT = Integer.parseInt(args[6]);
+				MDR_IP = args[7];
+				MDR_PORT = Integer.parseInt(args[8]);
+			}
 
-		if (args.length > 3) {
-			// se receber mais que 3 tem que alterar ip e portas
-			MC_IP = args[3];
-			MC_PORT = Integer.parseInt(args[4]);
-			MDB_IP = args[5];
-			MDB_PORT = Integer.parseInt(args[6]);
-			MDR_IP = args[7];
-			MDR_PORT = Integer.parseInt(args[8]);
+			// Registring RMI
+			Peer obj = new Peer();
+
+			// Bind the remote object's stub in the registry
+			Registry registry = LocateRegistry.getRegistry();
+			registry.rebind(srvc_accss_pnt, obj);
+
+			System.err.println("RMI Sucessfully Registred");
+
+			fileList = new ArrayList<FileInformation>();
+			mc = new MulticastChannel(MC_IP, MC_PORT);
+			mdb = new MulticastChannel(MDB_IP, MDB_PORT);
+			mdr = new MulticastChannel(MDR_IP, MDR_PORT);
+
+			joinChannels();
+			initializeListeners();
+			initializeHandlers();
 		}
-
-		// Registring RMI
-		Peer obj = new Peer();
-
-		// Bind the remote object's stub in the registry
-		Registry registry = LocateRegistry.getRegistry();
-		registry.rebind(srvc_accss_pnt, obj);
-
-		System.err.println("RMI Sucessfully Registred");
-
-		fileList = new ArrayList<FileInformation>();
-		mc = new MulticastChannel(MC_IP, MC_PORT);
-		mdb = new MulticastChannel(MDB_IP, MDB_PORT);
-		mdr = new MulticastChannel(MDR_IP, MDR_PORT);
-
-		joinChannels();
-		initializeListeners();
-		initializeHandlers();
 	}
 
 }
