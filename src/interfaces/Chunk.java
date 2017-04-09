@@ -7,7 +7,6 @@ public class Chunk implements Comparable<Chunk> {
 	private int MAX_CHUNK_SIZE = 64000;
 	private byte[] content = new byte[MAX_CHUNK_SIZE];
 	private boolean checked;
-	private boolean endOfFile = false;
 
 	public Chunk(String fileId, int chunkNumber, byte[] content) {
 		this.fileId = fileId;
@@ -15,9 +14,6 @@ public class Chunk implements Comparable<Chunk> {
 		this.chunkNumber = chunkNumber;
 		this.content = content;
 		this.checked = false;
-
-		if (this.content.length < MAX_CHUNK_SIZE)
-			this.endOfFile = true;
 	}
 
 	public Chunk(String fileId, int chunkNumber, int replicationDegree, byte[] content) {
@@ -26,9 +22,6 @@ public class Chunk implements Comparable<Chunk> {
 		this.chunkNumber = chunkNumber;
 		this.content = content;
 		this.checked = false;
-
-		if (this.content.length < MAX_CHUNK_SIZE)
-			this.endOfFile = true;
 	}
 
 	@Override
@@ -58,13 +51,6 @@ public class Chunk implements Comparable<Chunk> {
 	 */
 	public boolean isChecked() {
 		return checked;
-	}
-
-	/**
-	 * @return the endOfFile
-	 */
-	public boolean isEndOfFile() {
-		return endOfFile;
 	}
 
 	/**
