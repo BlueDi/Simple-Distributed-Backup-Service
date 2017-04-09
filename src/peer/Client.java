@@ -8,8 +8,8 @@ import java.rmi.registry.Registry;
 public class Client {
 	private static String peer_ap;
 	private static String operation;
-	private static String operand_1;
-	private static String operand_2;
+	private static String operand_1 = "";
+	private static String operand_2 = "";
 
 	/**
 	 * This function sends the arguments to a function in the peer (selected by
@@ -33,22 +33,30 @@ public class Client {
 	}
 
 	/**
-	 * Verifica se os argumentos passados são válidos. TODO: resto das
-	 * verificações dos argumentos. Ainda só está feito para a operation.
+	 * Verifica se os argumentos passados são válidos.
+	 * 
+	 * @param args
+	 *            Argumentos para o protocolo
+	 */
+	private static boolean processInput(String[] args) {
+		System.out.println(args.length);
+		peer_ap = args[0];
+		operation = args[1];
+		if (args.length >= 3)
+			operand_1 = args[2];
+		if (args.length >= 4)
+			operand_2 = args[3];
+
+		return ("BACKUP".equals(operation) || "RESTORE".equals(operation) || "DELETE".equals(operation)
+				|| "REMOVE".equals(operation) || "STATE".equals(operation));
+	}
+
+	/**
+	 * Testing Client Application
 	 * 
 	 * @param args
 	 *            Argumentos passados na consola
 	 */
-	private static boolean processInput(String[] args) {
-		peer_ap = args[0];
-		operation = args[1];
-		operand_1 = args[2];
-		operand_2 = args[3];
-
-		return ("BACKUP".equals(operation) || "RESTORE".equals(operation) || "DELETE".equals(operation)
-				|| "RECLAIM".equals(operation) || "STATE".equals(operation));
-	}
-
 	public static void main(String[] args) {
 		if (args.length < 3) {
 			System.err.println("Usage: java TestApp <peer_ap> <operation>");
@@ -56,7 +64,7 @@ public class Client {
 			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");
 			System.exit(1);
 		}
-	
+
 		if (processInput(args))
 			callOperation();
 	}
