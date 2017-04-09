@@ -39,7 +39,6 @@ public class Client {
 	 *            Argumentos para o protocolo
 	 */
 	private static boolean processInput(String[] args) {
-		System.out.println(args.length);
 		peer_ap = args[0];
 		operation = args[1];
 		if (args.length >= 3)
@@ -48,7 +47,7 @@ public class Client {
 			operand_2 = args[3];
 
 		return ("BACKUP".equals(operation) || "RESTORE".equals(operation) || "DELETE".equals(operation)
-				|| "REMOVE".equals(operation) || "STATE".equals(operation));
+				|| "REMOVED".equals(operation) || "STATE".equals(operation));
 	}
 
 	/**
