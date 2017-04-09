@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import interfaces.Chunk;
 import peer.Peer;
@@ -21,6 +22,7 @@ public class McHandler implements Runnable {
 	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
 	private String messageType = "";
 	private Queue<Chunk> chunksToSend = new LinkedList<Chunk>();
+	private Queue<Chunk> chunksToRetransmit = new LinkedList<Chunk>();
 	private Map<ChunkInfo, ArrayList<Integer>> storedMap = new HashMap<ChunkInfo, ArrayList<Integer>>();
 
 	public McHandler(Queue<byte[]> msgQueue, int id) {
@@ -80,9 +82,10 @@ public class McHandler implements Runnable {
 				} else if ("DELETE".equals(this.messageType)) {
 					deleteFiles(msg[3]);
 				} else if ("GETCHUNK".equals(this.messageType)) {
-					searchChunk(msg[3], msg[4]);
+					searchChunk(data);
 				} else if ("REMOVED".equals(this.messageType)) {
-					doIHave(msg[3], msg[4]);
+					int senderId = Integer.parseInt(msg[2]);
+					doIHave(msg[3], msg[4], senderId);
 				}
 			}
 		}
@@ -121,21 +124,21 @@ public class McHandler implements Runnable {
 		}
 	}
 
-	private void doIHave(String fileId, String chunkNo) {
-//		int i = Integer.parseInt(chunkNo);
-//		String chunkNoStr = String.format("%03d", i);
-//
-//		if (fileExists("chunks/" + fileId + chunkNoStr)) {
-//			Path path = Paths.get("chunks/" + fileId + chunkNoStr);
-//
-//			try {
-//				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
-//				chunksToSend.add(c);
-//				Peer.sendChunks();
-//			} catch (IOException e) {
-//				System.err.println("Failed to read in mcHandler.doIHave().");
-//			}
-//		}
+	private void doIHave(String fileId, String chunkNo, int senderId) {
+		int i = Integer.parseInt(chunkNo);
+		String chunkNoStr = String.format("%03d", i);
+
+		if (fileExists("chunks/" + fileId + "." + chunkNoStr)) {
+			Path path = Paths.get("chunks/" + fileId + "." + chunkNoStr);
+
+			try {
+				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
+				chunksToRetransmit.add(c);
+				Peer.sendRetransmission(senderId);
+			} catch (IOException e) {
+				System.err.println("Failed to read in mcHandler.doIHave().");
+			}
+		}
 	}
 
 	private boolean fileExists(String path) {
@@ -146,6 +149,10 @@ public class McHandler implements Runnable {
 
 	public Queue<Chunk> getChunksToSend() {
 		return chunksToSend;
+	}
+
+	public Queue<Chunk> getChunksToRetransmit() {
+		return chunksToRetransmit;
 	}
 
 	public boolean receivedAllStored(Chunk c) {
@@ -173,20 +180,47 @@ public class McHandler implements Runnable {
 	 * @param chunkNo
 	 *            Número do chunk procurado
 	 */
-	private void searchChunk(String fileId, String chunkNo) {
-		int i = Integer.parseInt(chunkNo);
-		String chunkNoStr = String.format("%03d", i);
+	private void searchChunk(byte[] data) {
+		String convert = new String(data, 0, data.length);
+		String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
+		String fileId = msg[3];
+		int chunkNo = Integer.parseInt(msg[4]);
+		String chunkNoStr = String.format("%03d", chunkNo);
 
-		if (fileExists("chunks/" + fileId + chunkNoStr)) {
-			Path path = Paths.get("chunks/" + fileId + chunkNoStr);
+		if (fileExists("chunks/" + fileId + "." + chunkNoStr)) {
+			Path path = Paths.get("chunks/" + fileId + "." + chunkNoStr);
 
-			try {
-				Chunk c = new Chunk(fileId, Integer.parseInt(chunkNo), Files.readAllBytes(path));
-				chunksToSend.add(c);
-				Peer.sendChunks();
-			} catch (IOException e) {
-				System.err.println("Failed to read in mcHandler.searchChunk().");
-			}
+			pauseThread();
+
+			if (!msgQueue.contains(data))
+				try {
+					Chunk c = new Chunk(fileId, chunkNo, Files.readAllBytes(path));
+					chunksToSend.add(c);
+					Peer.sendChunks();
+				} catch (IOException e) {
+					System.err.println("Failed to read in mcHandler.searchChunk().");
+				}
+		}
+	}
+
+	/**
+	 * Waits from 0 to 400ms.
+	 */
+	private void pauseThread() {
+		try {
+			new Thread(() -> {
+				try {
+					Thread.sleep(ThreadLocalRandom.current().nextLong(400));
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}) {
+				{
+					start();
+				}
+			}.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 
