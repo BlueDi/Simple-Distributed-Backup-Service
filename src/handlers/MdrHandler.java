@@ -2,9 +2,13 @@ package handlers;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,36 +18,6 @@ import java.util.Stack;
 import interfaces.Chunk;
 
 public class MdrHandler implements Runnable {
-	public static List<File> listOfFilesToMerge(File oneOfFiles) {
-		String tmpName = oneOfFiles.getName();// {name}.{number}
-		String destFileName = tmpName.substring(0, tmpName.lastIndexOf('.'));// remove
-																				// .{number}
-		File[] files = oneOfFiles.getParentFile()
-				.listFiles((File dir, String name) -> name.matches(destFileName + "[.]\\d+"));
-		Arrays.sort(files);// ensuring order 001, 002, ..., 010, ...
-		return Arrays.asList(files);
-	}
-
-	public static List<File> listOfFilesToMerge(String oneOfFiles) {
-		return listOfFilesToMerge(new File(oneOfFiles));
-	}
-
-	public static void mergeFiles(File oneOfFiles, File into) throws IOException {
-		mergeFiles(listOfFilesToMerge(oneOfFiles), into);
-	}
-
-	public static void mergeFiles(List<File> files, File into) throws IOException {
-		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
-			for (File f : files) {
-				Files.copy(f.toPath(), mergingStream);
-			}
-		}
-	}
-
-	public static void mergeFiles(String oneOfFiles, String into) throws IOException {
-		mergeFiles(new File(oneOfFiles), new File(into));
-	}
-
 	private int PEER_ID;
 
 	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
@@ -53,6 +27,13 @@ public class MdrHandler implements Runnable {
 	public MdrHandler(Queue<byte[]> msgQueue, int id) {
 		this.msgQueue = msgQueue;
 		PEER_ID = id;
+	}
+
+	@Override
+	public void run() {
+		while (!Thread.currentThread().isInterrupted()) {
+			analyseMessages();
+		}
 	}
 
 	/**
@@ -68,10 +49,9 @@ public class MdrHandler implements Runnable {
 		int bodyIndex = msg.indexOf("\r\n") + 4;
 		byte[] destination = new byte[msg.length() - bodyIndex];
 
-		if (bodyIndex != -1) {
+		if (bodyIndex != -1)
 			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
-			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
-		}
+
 		return destination;
 	}
 
@@ -85,21 +65,6 @@ public class MdrHandler implements Runnable {
 	private boolean analyseHeader(String[] msg) {
 		return "1.0".equals(msg[1]) && PEER_ID != Integer.parseInt(msg[2]);
 	}
-
-	// /**
-	// * Junta dois byte arrays.
-	// * @param first array para colocar no inicio do novo array
-	// * @param second array para colocar no fim do novo array
-	// * @return Array = first + second
-	// */
-	// private byte[] joinArrays(byte[] first, byte[] second){
-	// byte[] destination = new byte[first.length + second.length];
-	//
-	// System.arraycopy(first, 0, destination, 0, first.length);
-	// System.arraycopy(second, 0, destination, first.length, second.length);
-	//
-	// return destination;
-	// }
 
 	/**
 	 * Analisa todas as mensagens armazenadas e cria o ficheiro se recebeu o
@@ -119,10 +84,9 @@ public class MdrHandler implements Runnable {
 
 				chunksRequests.push(chunk);
 
-				System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
-
-				if (chunk.isEndOfFile()) {
-					createFile(msg[3]);
+				if (isEndOfFile()) {
+					System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
+					createFile(chunk.getFileId());
 				}
 			}
 		}
@@ -140,32 +104,15 @@ public class MdrHandler implements Runnable {
 		return "CHUNK".equals(messageType);
 	}
 
+	/**
+	 * Cria o ficheiro fileId na pasta files, com os chunks armazenados em
+	 * chunks.
+	 * 
+	 * @param fileId
+	 *            Caminho do ficheiro a criar
+	 */
 	private void createFile(String fileId) {
-		// byte[] data = new byte[0];
-		// Path path = Paths.get(("./files/" + fileId));
-		//
-		// while(!chunksRequests.isEmpty()){
-		// Chunk c = chunksRequests.pop();
-		// if(c.getFileId().equals(fileId))
-		// data = joinArrays(c.getContent(), data);
-		// }
-		//
-		// try {
-		// Files.createDirectories(path.getParent());
-		// Files.createFile(path);
-		// Files.write(path, data, StandardOpenOption.APPEND);
-		// } catch (FileAlreadyExistsException e) {
-		// System.err.println("File already exists: " + e.getMessage());
-		// } catch (IOException e) {
-		// System.err.println("I/O error in mdrHandler createFile.");
-		// }
-
-		try {
-			mergeFiles("./chunks/" + fileId, "./files/" + fileId);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		mergeFiles("chunks/" + fileId, "files/" + fileId);
 	}
 
 	/**
@@ -176,12 +123,66 @@ public class MdrHandler implements Runnable {
 	}
 
 	/**
-	 * @return the endOfFile
+	 * Verifica se o chunk recebido mais recente é o último do ficheiro.
+	 * 
+	 * @return true se o chunk é o último do seu ficheiro, false se não for
 	 */
 	public boolean isEndOfFile() {
 		if (chunksRequests.isEmpty())
 			return false;
-		return chunksRequests.peek().isEndOfFile();
+		return chunksRequests.peek().getContent().length < 64000;
+	}
+
+	/**
+	 * Procura todos os chunks do ficheiro fileName.
+	 * 
+	 * @param fileName
+	 *            ficheiro a procurar
+	 * @return Lista dos chunks de fileName
+	 */
+	private List<File> listOfFilesToMerge(String fileName) {
+		File oneOfFiles = new File(fileName);
+		Path dir = Paths.get(oneOfFiles.getParent());
+		List<File> files = new LinkedList<File>();
+
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, oneOfFiles.getName() + ".*")) {
+			for (Path p : stream)
+				files.add(p.toFile());
+		} catch (Exception e) {
+			System.out.println("Failed to locate the directory chunks");
+		}
+
+		return files;
+	}
+
+	/**
+	 * Junta todos os chunks da lista files num novo ficheiro into.
+	 * 
+	 * @param files
+	 *            lista de ficheiros a juntar
+	 * @param into
+	 *            novo ficheiro
+	 */
+	private void mergeFiles(List<File> files, File into) {
+		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
+			for (File f : files) {
+				Files.copy(f.toPath(), mergingStream);
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println("File was not found when trying to merge.");
+		} catch (IOException e) {
+			System.err.println("I/O exception in MdrHandler.mergeFiles.");
+		}
+	}
+
+	/**
+	 * Cria o ficheiro destFile com o conteúdo de sourceFile.
+	 * 
+	 * @param sourceFile
+	 * @param destFile
+	 */
+	private void mergeFiles(String sourceFile, String destFile) {
+		mergeFiles(listOfFilesToMerge(sourceFile), new File(destFile));
 	}
 
 	/**
@@ -194,13 +195,6 @@ public class MdrHandler implements Runnable {
 		System.out.println("\nReceived on MDR: ");
 		for (int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
-		System.out.print(" <CRLF><CRLF><body>\n");
-	}
-
-	@Override
-	public void run() {
-		while (!Thread.currentThread().isInterrupted()) {
-			analyseMessages();
-		}
+		System.out.print("<CRLF><CRLF><body>\n");
 	}
 }

@@ -30,6 +30,29 @@ public class MdbHandler implements Runnable {
 	}
 
 	/**
+	 * Analisa todas as mensagens recebidas no MDB Channel.
+	 */
+	private void analyseMessages() {
+		if (!msgQueue.isEmpty()) {
+			byte[] data = msgQueue.poll();
+			String convert = new String(data, 0, data.length);
+			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
+
+			if (checkValidMessageType(msg[0]) && checkHeader(msg)) {
+				print(msg);
+
+				byte[] body = checkBody(data, convert);
+				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
+
+				storeChunk(chunk);
+				chunksReceived.add(chunk);
+
+				Peer.sendStored();
+			}
+		}
+	}
+
+	/**
 	 * Analisa o body da mensagem.
 	 * 
 	 * @param data
@@ -38,14 +61,13 @@ public class MdbHandler implements Runnable {
 	 *            Mensagem recebida
 	 * @return byte[] com o body da mensagem
 	 */
-	private byte[] analyseBody(byte[] data, String msg) {
+	private byte[] checkBody(byte[] data, String msg) {
 		int bodyIndex = msg.indexOf("\r\n") + 4;
 		byte[] destination = new byte[msg.length() - bodyIndex];
 
-		if (bodyIndex != -1) {
+		if (bodyIndex != -1)
 			System.arraycopy(data, bodyIndex, destination, 0, data.length - bodyIndex);
-			System.out.println("Received a body of size " + destination.length + " bytes. " + bodyIndex);
-		}
+
 		return destination;
 	}
 
@@ -56,7 +78,7 @@ public class MdbHandler implements Runnable {
 	 *            Mensagem recebida
 	 * @return true se o cabeçalho é válido
 	 */
-	private boolean analyseHeader(String[] msg) {
+	private boolean checkHeader(String[] msg) {
 		String version = msg[1];
 		int senderId = Integer.parseInt(msg[2]);
 		int replicationDeg = Integer.parseInt(msg[5]);
@@ -64,27 +86,8 @@ public class MdbHandler implements Runnable {
 		return "1.0".equals(version) && PEER_ID != senderId && (replicationDeg <= 9 || replicationDeg >= 0);
 	}
 
-	/**
-	 * Analisa todas as mensagens armazenadas.
-	 */
-	private void analyseMessages() {
-		if (!msgQueue.isEmpty()) {
-			byte[] data = msgQueue.poll();
-			String convert = new String(data, 0, data.length);
-			String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
-
-			if (checkValidMessageType(msg[0]) && analyseHeader(msg)) {
-				print(msg);
-
-				byte[] body = analyseBody(data, convert);
-				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), Integer.parseInt(msg[5]), body);
-
-				storeChunk(chunk);
-				chunksReceived.add(chunk);
-
-				Peer.sendStored();
-			}
-		}
+	public boolean checkIfReceivedRetransmission(byte[] b) {
+		return !msgQueue.isEmpty() && msgQueue.contains(b);
 	}
 
 	/**
@@ -128,9 +131,8 @@ public class MdbHandler implements Runnable {
 		} catch (FileAlreadyExistsException e) {
 			System.err.println("Chunk already exists: " + e.getMessage());
 		} catch (IOException e) {
-			System.err.println("I/O error in mdbHandler storeChunk.");
+			System.err.println("I/O error in mdbHandler.storeChunk.");
 		}
-
 	}
 
 	/**
@@ -141,7 +143,7 @@ public class MdbHandler implements Runnable {
 	 */
 	protected void print(String[] msg) {
 		System.out.println("\nReceived on MDB: ");
-		for (int i = 0; i < msg.length - 3; i++)
+		for (int i = 0; i < msg.length; i++)
 			System.out.print(msg[i] + "; ");
 		System.out.print("<CRLF><CRLF><body>;\n");
 	}

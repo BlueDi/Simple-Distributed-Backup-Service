@@ -6,3 +6,8 @@
 .project
 
 *.class
+
+*.prefs
+
+codacy-coverage.json
+coverage.xml
