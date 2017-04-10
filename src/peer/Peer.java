@@ -12,7 +12,9 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -170,21 +172,21 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	 * The client evokes this function through RMI. It then reads the operation
 	 * argument and calls the apropriate method.
 	 */
-	public void handleOperation(String operation, String filePath, String arg2) throws RemoteException {
+	public void handleOperation(String operation, String arg1, String arg2) throws RemoteException {
 		switch (operation) {
 		case "BACKUP":
 			int replicationDegree = Integer.parseInt(arg2);
-			operationBackup(filePath, replicationDegree);
+			operationBackup(arg1, replicationDegree);
 			break;
 		case "RESTORE":
-			operationRestore(filePath);
+			operationRestore(arg1);
 			break;
 		case "DELETE":
-			operationDelete(filePath);
+			operationDelete(arg1);
 			break;
 		case "REMOVED":
-			int chunkNo = Integer.parseInt(arg2);
-			operationReclaim(filePath, chunkNo);
+			int spaceToFree = Integer.parseInt(arg1);
+			operationReclaim(spaceToFree);
 			break;
 		case "STATE":
 			operationState();
@@ -256,17 +258,47 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	 * da mensagem de Reclaim é: REMOVED Version SenderId FileId ChunkNo
 	 * CRLF;CRLF
 	 * 
-	 * @param filePath
-	 *            Ficheiro a remover
-	 * @param chunkNo
+	 * @param spaceToFree
+	 *            Espaço a libertar
 	 */
-	private void operationReclaim(String filePath, int chunkNo) {
-		String removedMsg = "REMOVED" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + chunkNo;
-		System.out.println("REMOVED: " + removedMsg + " <CRLF><CRLF>");
-		removedMsg += " " + "\r\n" + "\r\n";
-		byte[] remove = removedMsg.getBytes();
+	private void operationReclaim(int spaceToFree) {
+		Queue<Path> pathsToRemove = new LinkedList<Path>();
 
-		mc.send(remove);
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get("chunks/"))) {
+			for (Path path : directoryStream) {
+				System.out.println("  " + path.toString() + " ---- " + spaceToFree);
+				pathsToRemove.add(path);
+				spaceToFree -= Files.size(path);
+
+				if (spaceToFree <= 0)
+					break;
+			}
+		} catch (IOException ex) {
+			System.err.println("Error while trying to open chunks directory.");
+		}
+
+		while (!pathsToRemove.isEmpty()) {
+			Path p = pathsToRemove.poll();
+			String completeFilePath = p.getFileName().toString();
+			String filePath = completeFilePath.substring(0, completeFilePath.lastIndexOf('.'));
+			String chunkNo = completeFilePath.substring(completeFilePath.lastIndexOf('.') + 1,
+					completeFilePath.length());
+
+			chunkNo.replaceFirst("^0+(?!$)", "");
+
+			String removedMsg = "REMOVED" + " " + VERSION + " " + PEER_ID + " " + filePath + " " + chunkNo;
+			System.out.println("RECLAIM: " + removedMsg + " <CRLF><CRLF>");
+			removedMsg += " " + "\r\n" + "\r\n";
+			byte[] remove = removedMsg.getBytes();
+
+			mc.send(remove);
+
+			try {
+				Files.delete(p);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
