@@ -5,15 +5,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -21,16 +16,11 @@ import java.util.Stack;
 
 import interfaces.Chunk;
 
-public class MdrHandler implements Runnable {
-	private int PEER_ID;
-
-	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
-
+public class MdrHandler extends Handler implements Runnable {
 	private Stack<Chunk> chunksRequests = new Stack<Chunk>();
 
 	public MdrHandler(Queue<byte[]> msgQueue, int id) {
-		this.msgQueue = msgQueue;
-		PEER_ID = id;
+		super(msgQueue, id);
 	}
 
 	@Override
@@ -60,7 +50,7 @@ public class MdrHandler implements Runnable {
 	}
 
 	/**
-	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * Analisa o cabeçalho da mensagem.
 	 * 
 	 * @param msg
 	 *            Mensagem recebida
@@ -86,14 +76,10 @@ public class MdrHandler implements Runnable {
 				byte[] body = analyseBody(data, convert);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
-				System.out.println("----->Recebido no mdr: " + msg[3]);
-
 				chunksRequests.push(chunk);
 
-				if (isEndOfFile()) {
-					System.out.println("tamanho da lista de chunks recebido no mdr: " + chunksRequests.size());
+				if (isEndOfFile())
 					createFile(chunk.getFileId());
-				}
 			}
 		}
 	}
@@ -118,7 +104,7 @@ public class MdrHandler implements Runnable {
 	 *            Caminho do ficheiro a criar
 	 */
 	private void createFile(String fileId) {
-		String encrypted = encryptFileId(fileId);
+		String encrypted = encrypt(fileId);
 		mergeFiles("chunks/" + encrypted, "files/" + fileId);
 	}
 
@@ -162,19 +148,6 @@ public class MdrHandler implements Runnable {
 		return files;
 	}
 
-	private String encryptFileId(String msg){
-		String encrypt = msg;
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
-			encrypt = Base64.getEncoder().encodeToString(hash);
-			encrypt = encrypt.replace("/", "blue");
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return encrypt;
-	}
-
 	/**
 	 * Junta todos os chunks da lista files num novo ficheiro into.
 	 * 
@@ -182,7 +155,7 @@ public class MdrHandler implements Runnable {
 	 *            lista de ficheiros a juntar
 	 * @param into
 	 *            novo ficheiro
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	private void mergeFiles(List<File> files, File into) throws IOException {
 		Files.createDirectories(into.toPath().getParent());
@@ -205,7 +178,7 @@ public class MdrHandler implements Runnable {
 	private void mergeFiles(String sourceFile, String destFile) {
 		try {
 			mergeFiles(listOfFilesToMerge(sourceFile), new File(destFile));
-		} catch (IOException e) {	
+		} catch (IOException e) {
 			System.err.println("I/O exception in MdrHandler.mergeFiles.");
 		}
 	}

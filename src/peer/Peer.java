@@ -1,6 +1,5 @@
 package peer;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
@@ -13,10 +12,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 
 import handlers.McHandler;
 import handlers.MdbHandler;
@@ -48,8 +45,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 
 	private static int PEER_ID;
 	private static double VERSION;
-
-	private static ArrayList<FileInformation> fileList;
 
 	protected Peer() throws RemoteException {
 		super();
@@ -381,7 +376,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			String srvc_accss_pnt = args[2];
 			System.out.println("Peer: " + srvc_accss_pnt + " started.");
 
-			// Iniciar ip e portas default
 			String MC_IP = "224.0.0.2";
 			int MC_PORT = 4002;
 			String MDB_IP = "224.0.0.3";
@@ -390,7 +384,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			int MDR_PORT = 4004;
 
 			if (args.length > 3) {
-				// se receber mais que 3 tem que alterar ip e portas
 				MC_IP = args[3];
 				MC_PORT = Integer.parseInt(args[4]);
 				MDB_IP = args[5];
@@ -399,16 +392,13 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 				MDR_PORT = Integer.parseInt(args[8]);
 			}
 
-			// Registring RMI
 			Peer obj = new Peer();
 
-			// Bind the remote object's stub in the registry
 			Registry registry = LocateRegistry.getRegistry();
 			registry.rebind(srvc_accss_pnt, obj);
 
-			System.err.println("RMI Sucessfully Registred");
+			System.out.println("RMI Sucessfully Registred");
 
-			fileList = new ArrayList<FileInformation>();
 			mc = new MulticastChannel(MC_IP, MC_PORT);
 			mdb = new MulticastChannel(MDB_IP, MDB_PORT);
 			mdr = new MulticastChannel(MDR_IP, MDR_PORT);

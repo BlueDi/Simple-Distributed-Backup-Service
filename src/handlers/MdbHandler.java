@@ -1,31 +1,22 @@
 package handlers;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.Base64;
 import java.util.LinkedList;
 import java.util.Queue;
 
 import interfaces.Chunk;
 import peer.Peer;
 
-public class MdbHandler implements Runnable {
-	private int PEER_ID;
-	private Queue<byte[]> msgQueue;
+public class MdbHandler extends Handler implements Runnable {
 	private Queue<Chunk> chunksReceived = new LinkedList<Chunk>();
 
 	public MdbHandler(Queue<byte[]> msgQueue, int id) {
-		this.msgQueue = msgQueue;
-		PEER_ID = id;
+		super(msgQueue, id);
 	}
 
 	@Override
@@ -77,21 +68,8 @@ public class MdbHandler implements Runnable {
 		return destination;
 	}
 
-	private String encryptFileId(String msg){
-		String encrypt = msg;
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
-			encrypt = Base64.getEncoder().encodeToString(hash);
-			encrypt = encrypt.replace("/", "blue");
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return encrypt;
-	}
-
 	/**
-	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * Analisa o cabeçalho da mensagem.
 	 * 
 	 * @param msg
 	 *            Mensagem recebida
@@ -139,7 +117,7 @@ public class MdbHandler implements Runnable {
 	 */
 	private void storeChunk(Chunk chunk) {
 		String chunkNo = String.format("%03d", chunk.getChunkNumber());
-		Path path = Paths.get(("./chunks/" + encryptFileId(chunk.getFileId()) + "." + chunkNo));
+		Path path = Paths.get(("./chunks/" + encrypt(chunk.getFileId()) + "." + chunkNo));
 		byte[] data = new byte[0];
 
 		try {

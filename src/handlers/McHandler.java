@@ -2,15 +2,11 @@ package handlers;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,22 +17,18 @@ import java.util.concurrent.ThreadLocalRandom;
 import interfaces.Chunk;
 import peer.Peer;
 
-public class McHandler implements Runnable {
-	private int PEER_ID;
-	private Queue<byte[]> msgQueue = new LinkedList<byte[]>();
+public class McHandler extends Handler implements Runnable {
 	private String messageType = "";
 	private Queue<Chunk> chunksToSend = new LinkedList<Chunk>();
 	private Queue<Chunk> chunksToRetransmit = new LinkedList<Chunk>();
 	private Map<ChunkInfo, ArrayList<Integer>> storedMap = new HashMap<ChunkInfo, ArrayList<Integer>>();
 
 	public McHandler(Queue<byte[]> msgQueue, int id) {
-		this.msgQueue = msgQueue;
-		PEER_ID = id;
+		super(msgQueue, id);
 	}
 
 	/**
 	 * Adiciona a mensagem de STORED à tree de mensagens Stored já recebidas.
-	 * TODO: Modificar isto
 	 * 
 	 * @param ci
 	 *            Mensagem recebida
@@ -59,7 +51,7 @@ public class McHandler implements Runnable {
 	}
 
 	/**
-	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
+	 * Analisa o cabeçalho da mensagem.
 	 * 
 	 * @param msg
 	 *            Mensagem recebida
@@ -119,7 +111,7 @@ public class McHandler implements Runnable {
 	private void deleteFiles(String fileId) {
 		Path path = Paths.get("./chunks/");
 
-		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, fileId + "*")) {
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, encrypt(fileId) + "*")) {
 			for (final Path file : directoryStream) {
 				Files.delete(file);
 			}
@@ -188,7 +180,7 @@ public class McHandler implements Runnable {
 		String convert = new String(data, 0, data.length);
 		String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 		String fileId = msg[3];
-		String encriptedFileId = encryptFileId(fileId);
+		String encriptedFileId = encrypt(fileId);
 		int chunkNo = Integer.parseInt(msg[4]);
 		String chunkNoStr = String.format("%03d", chunkNo);
 
@@ -208,19 +200,6 @@ public class McHandler implements Runnable {
 		}
 	}
 
-	private String encryptFileId(String msg){
-		String encrypt = msg;
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
-			encrypt = Base64.getEncoder().encodeToString(hash);
-			encrypt = encrypt.replace("/", "blue");
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return encrypt;
-	}
-	
 	/**
 	 * Waits from 0 to 400ms.
 	 */
