@@ -48,8 +48,16 @@ public class Client {
 	private static boolean processInput(String[] args) {
 		peer_ap = args[0];
 		operation = args[1];
-		operand_1 = args[2];
-		operand_2 = args[3];
+		if(operation.equals("STATE"))
+		{
+			operand_1 = "";
+			operand_2 = "";
+		}
+		else
+		{
+			operand_1 = args[2];
+			operand_2 = args[3];
+		}
 
 		return ("BACKUP".equals(operation) || "RESTORE".equals(operation) || "DELETE".equals(operation)
 				|| "RECLAIM".equals(operation) || "STATE".equals(operation));
