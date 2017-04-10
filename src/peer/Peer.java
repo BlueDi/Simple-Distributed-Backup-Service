@@ -312,26 +312,16 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 	}
 
 	public void operationState() {
-		System.out.println("Printing State.");
+		System.out.println("State.");
 		File[] files = new File("./chunks").listFiles();
 		for (File file : files) {
 			if (file.isFile()) {
 				System.out.println(file.getName());
 			}
 		}
-		
+
 	}
-	public String printState() throws RemoteException {
-		String returnString = "";
-		System.out.println("Printing State.");
-		File[] files = new File("./chunks").listFiles();
-		for (File file : files) {
-			if (file.isFile()) {
-				returnString += file.getName()+"\n";
-			}
-		}
-		return returnString;
-	}
+
 	/**
 	 * Função principal do programa.
 	 * 
