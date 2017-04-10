@@ -5,11 +5,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -82,6 +86,8 @@ public class MdrHandler implements Runnable {
 				byte[] body = analyseBody(data, convert);
 				Chunk chunk = new Chunk(msg[3], Integer.parseInt(msg[4]), body);
 
+				System.out.println("----->Recebido no mdr: " + msg[3]);
+
 				chunksRequests.push(chunk);
 
 				if (isEndOfFile()) {
@@ -112,7 +118,8 @@ public class MdrHandler implements Runnable {
 	 *            Caminho do ficheiro a criar
 	 */
 	private void createFile(String fileId) {
-		mergeFiles("chunks/" + fileId, "files/" + fileId);
+		String encrypted = encryptFileId(fileId);
+		mergeFiles("chunks/" + encrypted, "files/" + fileId);
 	}
 
 	/**
@@ -141,11 +148,11 @@ public class MdrHandler implements Runnable {
 	 * @return Lista dos chunks de fileName
 	 */
 	private List<File> listOfFilesToMerge(String fileName) {
-		File oneOfFiles = new File(fileName);
-		Path dir = Paths.get(oneOfFiles.getParent());
+		File f = new File(fileName);
+		Path dir = Paths.get(f.getParent());
 		List<File> files = new LinkedList<File>();
 
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, oneOfFiles.getName() + ".*")) {
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, f.getName() + ".*")) {
 			for (Path p : stream)
 				files.add(p.toFile());
 		} catch (Exception e) {
@@ -155,6 +162,19 @@ public class MdrHandler implements Runnable {
 		return files;
 	}
 
+	private String encryptFileId(String msg){
+		String encrypt = msg;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
+			encrypt = Base64.getEncoder().encodeToString(hash);
+			encrypt = encrypt.replace("/", "blue");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return encrypt;
+	}
+
 	/**
 	 * Junta todos os chunks da lista files num novo ficheiro into.
 	 * 
@@ -162,16 +182,17 @@ public class MdrHandler implements Runnable {
 	 *            lista de ficheiros a juntar
 	 * @param into
 	 *            novo ficheiro
+	 * @throws IOException 
 	 */
-	private void mergeFiles(List<File> files, File into) {
+	private void mergeFiles(List<File> files, File into) throws IOException {
+		Files.createDirectories(into.toPath().getParent());
+		Files.createFile(into.toPath());
 		try (BufferedOutputStream mergingStream = new BufferedOutputStream(new FileOutputStream(into))) {
 			for (File f : files) {
 				Files.copy(f.toPath(), mergingStream);
 			}
 		} catch (FileNotFoundException e) {
 			System.err.println("File was not found when trying to merge.");
-		} catch (IOException e) {
-			System.err.println("I/O exception in MdrHandler.mergeFiles.");
 		}
 	}
 
@@ -182,7 +203,11 @@ public class MdrHandler implements Runnable {
 	 * @param destFile
 	 */
 	private void mergeFiles(String sourceFile, String destFile) {
-		mergeFiles(listOfFilesToMerge(sourceFile), new File(destFile));
+		try {
+			mergeFiles(listOfFilesToMerge(sourceFile), new File(destFile));
+		} catch (IOException e) {	
+			System.err.println("I/O exception in MdrHandler.mergeFiles.");
+		}
 	}
 
 	/**

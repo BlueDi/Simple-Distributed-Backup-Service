@@ -2,11 +2,15 @@ package handlers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -184,11 +188,12 @@ public class McHandler implements Runnable {
 		String convert = new String(data, 0, data.length);
 		String[] msg = convert.substring(0, convert.indexOf("\r\n")).split("\\s");
 		String fileId = msg[3];
+		String encriptedFileId = encryptFileId(fileId);
 		int chunkNo = Integer.parseInt(msg[4]);
 		String chunkNoStr = String.format("%03d", chunkNo);
 
-		if (fileExists("chunks/" + fileId + "." + chunkNoStr)) {
-			Path path = Paths.get("chunks/" + fileId + "." + chunkNoStr);
+		if (fileExists("chunks/" + encriptedFileId + "." + chunkNoStr)) {
+			Path path = Paths.get("chunks/" + encriptedFileId + "." + chunkNoStr);
 
 			pauseThread();
 
@@ -203,6 +208,19 @@ public class McHandler implements Runnable {
 		}
 	}
 
+	private String encryptFileId(String msg){
+		String encrypt = msg;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
+			encrypt = Base64.getEncoder().encodeToString(hash);
+			encrypt = encrypt.replace("/", "blue");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return encrypt;
+	}
+	
 	/**
 	 * Waits from 0 to 400ms.
 	 */

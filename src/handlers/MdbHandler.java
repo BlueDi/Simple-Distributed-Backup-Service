@@ -1,11 +1,17 @@
 package handlers;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -71,6 +77,19 @@ public class MdbHandler implements Runnable {
 		return destination;
 	}
 
+	private String encryptFileId(String msg){
+		String encrypt = msg;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest(msg.getBytes(StandardCharsets.UTF_8));
+			encrypt = Base64.getEncoder().encodeToString(hash);
+			encrypt = encrypt.replace("/", "blue");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return encrypt;
+	}
+
 	/**
 	 * Analisa o cabeçalho da mensagem. TODO: Encriptação do FileId
 	 * 
@@ -83,7 +102,7 @@ public class MdbHandler implements Runnable {
 		int senderId = Integer.parseInt(msg[2]);
 		int replicationDeg = Integer.parseInt(msg[5]);
 
-		return "1.0".equals(version) && PEER_ID != senderId && (replicationDeg <= 9 || replicationDeg >= 0);
+		return "1.0".equals(version) && PEER_ID != senderId && replicationDeg >= 0;
 	}
 
 	public boolean checkIfReceivedRetransmission(byte[] b) {
@@ -120,7 +139,7 @@ public class MdbHandler implements Runnable {
 	 */
 	private void storeChunk(Chunk chunk) {
 		String chunkNo = String.format("%03d", chunk.getChunkNumber());
-		Path path = Paths.get(("./chunks/" + chunk.getFileId() + "." + chunkNo));
+		Path path = Paths.get(("./chunks/" + encryptFileId(chunk.getFileId()) + "." + chunkNo));
 		byte[] data = new byte[0];
 
 		try {
