@@ -57,7 +57,7 @@ public class Client {
 	 *            Argumentos passados na consola
 	 */
 	public static void main(String[] args) {
-		if (args.length < 3) {
+		if (args.length < 2) {
 			System.err.println("Usage: java TestApp <peer_ap> <operation>");
 			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1>");
 			System.err.println("Usage: java TestApp <peer_ap> <operation> <opnd_1> <opnd_2>");

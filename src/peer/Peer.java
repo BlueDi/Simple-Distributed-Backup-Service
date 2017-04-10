@@ -3,11 +3,16 @@ package peer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -287,6 +292,16 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		} while (!mdrHandler.isEndOfFile());
 	}
 
+	public void operationState() {
+		System.out.println("STATE: ");
+
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get("chunks/"))) {
+			for (Path path : directoryStream)
+				System.out.println("  " + path.toString());
+		} catch (IOException ex) {
+		}
+	}
+
 	/**
 	 * Waits from 0 to time in ms.
 	 * 
@@ -309,17 +324,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-	}
-
-	public void operationState() {
-		System.out.println("State.");
-		File[] files = new File("./chunks").listFiles();
-		for (File file : files) {
-			if (file.isFile()) {
-				System.out.println(file.getName());
-			}
-		}
-
 	}
 
 	/**
