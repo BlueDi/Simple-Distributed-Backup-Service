@@ -188,9 +188,6 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			int spaceToFree = Integer.parseInt(arg1);
 			operationReclaim(spaceToFree);
 			break;
-		case "STATE":
-			operationState();
-			break;
 		default:
 			System.out.println("Invalid message type.");
 			break;
@@ -324,14 +321,20 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 		} while (!mdrHandler.isEndOfFile());
 	}
 
-	public void operationState() {
-		System.out.println("STATE: ");
+	/**
+	 * Operação State. Cria uma mensagem sobre o estado atual do Peer.
+	 */
+	public String operationState() {
+		String stateMsg = "STATE:\n  Peer " + PEER_ID + ":\n";
 
 		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get("chunks/"))) {
 			for (Path path : directoryStream)
-				System.out.println("  " + path.toString());
+				stateMsg += "    " + path.toString() + "\n";
 		} catch (IOException ex) {
+			System.err.println("Error when tried to open chunks directory for State message.");
 		}
+
+		return stateMsg;
 	}
 
 	/**

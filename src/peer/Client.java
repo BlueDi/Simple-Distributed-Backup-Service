@@ -22,7 +22,11 @@ public class Client {
 		try {
 			registry = LocateRegistry.getRegistry();
 			PeerInterface stub = (PeerInterface) registry.lookup(peer_ap);
-			stub.handleOperation(operation, operand_1, operand_2);
+
+			if ("STATE".equals(operation))
+				System.out.println(stub.operationState());
+			else
+				stub.handleOperation(operation, operand_1, operand_2);
 		} catch (RemoteException e) {
 			System.err.println(
 					"Error in Client.callOperation(). Reference could not be created or communication with the registry failed.");
