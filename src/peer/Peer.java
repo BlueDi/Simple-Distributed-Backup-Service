@@ -336,8 +336,7 @@ public class Peer extends UnicastRemoteObject implements PeerInterface {
 			System.err.println("Usage: <protocol_version> <server_id> <service_access_point>");
 			System.err.println(
 					"Or: <protocol_version> <server_id> <service_access_point> <MC_IP> <MC_PORT> <MDB_IP> <MDB_PORT> <MDR_IP> <MDR_PORT>");
-		}
-		else{
+		} else {
 			VERSION = Double.parseDouble(args[0]);
 			PEER_ID = Integer.parseInt(args[1]);
 			String srvc_accss_pnt = args[2];
